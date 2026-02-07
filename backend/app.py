@@ -361,8 +361,9 @@ def claim_submit():
         return jsonify({"error": "signed_envelope_xdr required"}), 400
 
     result = submit_transaction(xdr)
-    if "hash" in result:
-        return jsonify({"hash": result["hash"], "status": "success"})
+    tx_hash = result.get("hash") or result.get("id")
+    if tx_hash:
+        return jsonify({"hash": tx_hash, "status": "success"})
     return jsonify({"error": result.get("detail", result.get("error", "Submit failed"))}), 400
 
 

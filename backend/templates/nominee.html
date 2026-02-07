@@ -144,6 +144,7 @@
       </div>
       <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text);"><strong>Add this key as a signer</strong></p>
       <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--muted);">Use <strong>Set Options</strong>: signer = the key above, weight = 1. You can build the transaction in Stellar Lab or sign it here with Freighter.</p>
+      <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--warn);">If Freighter says &quot;not connected&quot;, click <strong>Allow</strong> or <strong>Connect</strong> first, then try &quot;Build &amp; sign here&quot; again.</p>
       <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
         <a id="open-lab-btn" href="https://lab.stellar.org/transaction/build" target="_blank" rel="noopener" class="secondary" style="display: inline-block; background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; text-decoration: none; font-size: 0.95rem; font-weight: 600;">Open Stellar Lab → Build transaction</a>
         <button type="button" id="add-signer-btn" class="secondary" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Build & sign here (Freighter)</button>
@@ -246,15 +247,25 @@
             if (cfg.network_passphrase) networkPassphrase = cfg.network_passphrase;
           }
         } catch (_) {}
-        msgEl.textContent = 'Open Freighter to sign…';
         var freighterApi = window.freighterApi || window.freighter;
         if (!freighterApi || !freighterApi.signTransaction) {
           msgEl.textContent = 'Freighter extension not found. Use "Open Stellar Lab" to build and sign there.';
           msgEl.className = 'msg err';
           return;
         }
+        msgEl.textContent = 'Connect Freighter (allow this site if asked)…';
+        var allowed = false;
+        if (typeof freighterApi.requestAccess === 'function') {
+          var accessRes = await freighterApi.requestAccess().catch(function () { return {}; });
+          allowed = !accessRes.error && accessRes.address;
+        }
+        if (!allowed && typeof freighterApi.setAllowed === 'function') {
+          var setRes = await freighterApi.setAllowed().catch(function () { return {}; });
+          allowed = setRes && setRes.isAllowed;
+        }
+        msgEl.textContent = 'Open Freighter to sign (click Confirm)…';
         var signed = await freighterApi.signTransaction(txXdr, { networkPassphrase: networkPassphrase });
-        var signedXdr = signed && (signed.signedTransaction || signed.signedEnvelope || signed);
+        var signedXdr = signed && (signed.signedTransaction || signed.signedEnvelope || signed.signedTxXdr || signed);
         if (!signedXdr) {
           msgEl.textContent = 'Signing cancelled or failed.';
           msgEl.className = 'msg err';
