@@ -91,87 +91,17 @@
     a.btn { display: inline-block; background: var(--accent); color: #fff; padding: 0.6rem 1.1rem; border-radius: 8px; font-weight: 600; text-decoration: none; }
     a.btn:hover { background: var(--accent-dim); color: #fff; }
   </style>
-  <script src="https://unpkg.com/@stellar/freighter-api@2.0.0/build/index.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div class="wrap">
     <h1>Walletsurance</h1>
-    <p class="tagline">On-chain inheritance · Dead Man's Switch</p>
-
-    <section class="card" id="status-card">
-      <h2>Contract status</h2>
-      <div id="status-body">
-        <span class="loading">Loading…</span>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Inactivity period</h2>
-      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">If you don’t <strong>ping</strong> within this time, your funds can be claimed and off-ramped to your beneficiary.</p>
-      <p style="margin: 0 0 0.75rem 0; font-size: 0.8rem; color: var(--muted);"><strong>What is “ping”?</strong> It’s an <em>on-chain transaction</em>: you (or your wallet) must call the contract’s <code>ping()</code> function from a Stellar wallet (e.g. Freighter, Stellar Laboratory). Visiting this website does <em>not</em> ping the contract.</p>
-      <label for="timeout_days">Off-ramp after no activity for</label>
-      <select id="timeout_days" name="timeout_days" style="width:100%;padding:0.6rem 0.75rem;margin-bottom:0.5rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.95rem;">
-        <option value="7">7 days</option>
-        <option value="30" selected>30 days</option>
-        <option value="90">90 days</option>
-      </select>
-      <p id="timeout-ledgers-hint" style="margin:0;font-size:0.8rem;color:var(--muted);">≈ 518,400 ledgers (used when you deposit on-chain)</p>
-    </section>
-
-    <section class="card">
-      <h2>Lock funds</h2>
-      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">Connect your <strong>Stellar</strong> wallet (Freighter only). When you lock, the tokens go to the <strong>contract (escrow)</strong> — you cannot spend them until the switch triggers (claim to beneficiary) or you keep pinging to keep them locked.</p>
-      <p style="margin: 0 0 0.75rem 0; font-size: 0.8rem; color: var(--warn);"><strong>Use Testnet:</strong> Open the Freighter extension → switch the network dropdown to <strong>Testnet</strong> (not Mainnet). Then come back and click Connect wallet.</p>
-      <p style="margin: 0 0 0.75rem 0; font-size: 0.75rem; color: var(--muted);">Ignore &quot;MetaMask&quot; and &quot;SES Removing…&quot; in the console. When you click Connect: <strong>allow popups</strong> for this site, look for the <strong>Freighter window</strong> (tab or popup), and click <strong>Allow</strong>. If you see &quot;No address returned&quot;, the popup was blocked or you didn’t approve — allow popups and try again.</p>
-      <div style="margin-bottom: 1rem;">
-        <button type="button" id="connect-wallet-btn" class="secondary">Connect wallet</button>
-        <span id="connected-address" class="mono" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--muted);"></span>
-      </div>
-      <div id="lock-form" style="opacity: 0.7; pointer-events: none;">
-        <label for="lock_amount">Amount (whole units of token)</label>
-        <input type="number" id="lock_amount" name="lock_amount" min="1" placeholder="100" style="margin-bottom: 0.9rem;">
-        <label for="lock_beneficiary">Beneficiary Stellar address (G…)</label>
-        <input type="text" id="lock_beneficiary" name="lock_beneficiary" placeholder="GAGONWXAMFADQZUYYVTRS6W32HIJTMAHLDIM5RFMLDWILCQJXDA33P54" maxlength="56" style="margin-bottom: 0.9rem;">
-        <label for="lock_timeout_days">Inactivity period</label>
-        <select id="lock_timeout_days" style="width:100%;padding:0.6rem 0.75rem;margin-bottom:0.9rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.95rem;">
-          <option value="5min">5 minutes (test)</option>
-          <option value="7">7 days</option>
-          <option value="30" selected>30 days</option>
-          <option value="90">90 days</option>
-        </select>
-        <label for="lock_token">Token contract address (optional if server has default)</label>
-        <input type="text" id="lock_token" name="lock_token" placeholder="C... or leave empty" style="margin-bottom: 0.9rem;">
-        <button type="button" id="lock-funds-btn">Lock funds</button>
-        <div id="lock-msg" class="msg"></div>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Register beneficiary</h2>
-      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;"><a href="#get-account" style="color:var(--accent);">Don’t have a Stellar address? Get one below.</a></p>
-      <form id="beneficiary-form">
-        <label for="stellar_address">Stellar address (G…, 56 characters)</label>
-        <input type="text" id="stellar_address" name="stellar_address" placeholder="GAGONWXAMFADQZUYYVTRS6W32HIJTMAHLDIM5RFMLDWILCQJXDA33P54" required pattern="^G[A-Z2-7]{55}$" maxlength="56" title="Must start with G and be 56 characters">
-        <label for="contract_id">Contract ID (optional)</label>
-        <input type="text" id="contract_id" name="contract_id" placeholder="CCOZSAWX2SEGGGXVRP2ZQFR7Y5GZIV64VBLJFUH2PHY4HG7KQDVOENMJ">
-        <label for="bank_holder">Account holder name (mock)</label>
-        <input type="text" id="bank_holder" name="bank_account_holder" placeholder="Jane Doe">
-        <label for="bank_account_number">Account number (mock)</label>
-        <input type="text" id="bank_account_number" name="bank_account_number" placeholder="1234567890">
-        <label for="bank_ifsc">IFSC code (mock)</label>
-        <input type="text" id="bank_ifsc" name="bank_ifsc" placeholder="SBIN0001234">
-        <label for="bank_name">Bank name (mock)</label>
-        <input type="text" id="bank_name" name="bank_name" placeholder="Example Bank">
-        <button type="submit">Register</button>
-        <div id="beneficiary-msg" class="msg"></div>
-      </form>
-    </section>
+    <p class="tagline">When you’re inactive, your nominee gets an SMS and can claim your entire wallet.</p>
 
     <section class="card" id="nominee-section">
-      <h2>Nominee (secondary key + SMS)</h2>
-      <p style="margin: 0 0 1rem 0; color: var(--muted); font-size: 0.9rem;">Create a <strong>secondary (sweep) key</strong> and register a nominee. We encrypt the key with a question/answer; when you’re inactive we send an SMS with a claim link. Only the correct answer unlocks the key in the browser.</p>
-      <a href="/nominee" class="btn">Create secondary key</a>
-      <p style="margin: 1rem 0 0.5rem 0; font-size: 0.85rem; color: var(--muted);">Already set up? Trigger inactivity check and send SMS to nominees:</p>
+      <h2>Set up nominee (SMS when you’re inactive)</h2>
+      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">Your funds <strong>stay in your Stellar account</strong> — nothing is locked in a contract. You create a <strong>secondary (sweep) key</strong>, add it as a co-signer to your account, and register a nominee. When you have <strong>no activity</strong> for the set period, we send an <strong>SMS</strong> with a claim link. Your nominee answers a secret question and can then sweep <strong>the entire balance</strong> to their address.</p>
+      <a href="/nominee" class="btn">Create secondary key &amp; register nominee</a>
+      <p style="margin: 1rem 0 0.5rem 0; font-size: 0.85rem; color: var(--muted);">Already set up? Run the inactivity check and send SMS to nominees:</p>
       <button type="button" id="check-nominees-btn" class="secondary" style="margin-top:0.25rem;">Check nominees &amp; send SMS</button>
       <div id="check-nominees-msg" class="msg"></div>
     </section>
@@ -182,16 +112,9 @@
         <li>Open <a href="https://laboratory.stellar.org/#account-creator?network=test" target="_blank" rel="noopener" style="color:var(--accent);">Stellar Laboratory – Account Creator</a> (Test network).</li>
         <li>Click <strong>Generate keypair</strong>. Copy your <strong>Public key</strong> (G…) and <strong>Secret key</strong> (S…). Keep the secret safe.</li>
         <li>Paste your public key in the box and click <strong>Fund account</strong> to get test XLM from Friendbot.</li>
-        <li>Use the <strong>Public key</strong> (G…) as the Stellar address when registering a beneficiary above.</li>
+        <li>Use the <strong>Public key</strong> (G…) as your account when you create a secondary key and register a nominee above.</li>
       </ol>
       <p style="margin:0.75rem 0 0;font-size:0.85rem;color:var(--muted);">Or fund via URL: <code>https://friendbot.stellar.org/?addr=YOUR_PUBLIC_KEY</code></p>
-    </section>
-
-    <section class="card">
-      <h2>Agent (mock)</h2>
-      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">Trigger a mock claim + off-ramp run. No real funds moved.</p>
-      <button type="button" id="agent-btn" class="secondary">Run agent</button>
-      <div id="agent-msg" class="msg"></div>
     </section>
 
     <footer>
@@ -202,235 +125,25 @@
   <script>
     const api = (path, opts = {}) => fetch(path, { headers: { 'Content-Type': 'application/json', ...opts.headers }, ...opts });
 
-    async function loadStatus() {
-      const el = document.getElementById('status-body');
-      try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 15000);
-        const r = await fetch('/api/contract/status', { signal: ctrl.signal });
-        clearTimeout(t);
-        const d = await r.json();
-        if (!r.ok) {
-          el.innerHTML = `<div class="status-row"><span class="dot warn"></span> ${d.error || 'Error'}</div><div class="mono" style="margin-top:0.5rem;font-size:0.8rem">${d.hint || ''}</div>`;
-          return;
-        }
-        const canClaim = d.can_claim ? '<span class="dot ok"></span> Claimable' : '<span class="dot no"></span> Not claimable';
-        const ben = d.beneficiary_address ? `<span class="mono">${d.beneficiary_address}</span>` : '—';
-        const cid = (d.contract_id || '').trim();
-        const shortId = cid.length >= 12 ? cid.slice(0, 4) + '…' + cid.slice(-4) : cid;
-        el.innerHTML = `
-          <div class="status-row">${canClaim}</div>
-          <div class="status-row">Beneficiary: ${ben}</div>
-          <div class="status-row" style="margin-top:0.5rem"><span class="mono" style="font-size:0.75rem" title="${cid}">${shortId || '—'}</span></div>
-        `;
-      } catch (e) {
-        const msg = e.name === 'AbortError' ? 'Request timed out (RPC may be unreachable).' : e.message;
-        el.innerHTML = `<div class="status-row"><span class="dot warn"></span> Failed to load: ${msg}</div><div class="mono" style="margin-top:0.5rem;font-size:0.8rem">Check CONTRACT_ID and SOROBAN_RPC_URL in Cloud Run.</div>`;
-      }
-    }
-
-    document.getElementById('beneficiary-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const msg = document.getElementById('beneficiary-msg');
-      msg.textContent = '';
-      msg.className = 'msg';
-      const body = {
-        stellar_address: document.getElementById('stellar_address').value.trim(),
-        contract_id: document.getElementById('contract_id').value.trim() || undefined,
-        bank_account_holder: document.getElementById('bank_holder').value.trim() || undefined,
-        bank_account_number: document.getElementById('bank_account_number').value.trim() || undefined,
-        bank_ifsc: document.getElementById('bank_ifsc').value.trim() || undefined,
-        bank_name: document.getElementById('bank_name').value.trim() || undefined,
-        timeout_days: document.getElementById('timeout_days').value || undefined
-      };
-      try {
-        const r = await api('/api/beneficiary', { method: 'POST', body: JSON.stringify(body) });
-        const d = await r.json();
-        if (r.ok) {
-          msg.textContent = d.message || 'Registered.';
-          msg.className = 'msg ok';
-          loadStatus();
-        } else {
-          msg.textContent = d.error || 'Error';
-          msg.className = 'msg err';
-        }
-      } catch (e) {
-        msg.textContent = e.message;
-        msg.className = 'msg err';
-      }
-    });
-
-    document.getElementById('agent-btn').addEventListener('click', async () => {
-      const msg = document.getElementById('agent-msg');
-      msg.textContent = 'Running…';
-      msg.className = 'msg loading';
-      try {
-        const r = await api('/api/agent/run', { method: 'POST', body: '{}' });
-        const d = await r.json();
-        msg.textContent = d.message || (d.offramp_mock || 'Done.');
-        msg.className = 'msg ok';
-      } catch (e) {
-        msg.textContent = e.message;
-        msg.className = 'msg err';
-      }
-    });
-
     document.getElementById('check-nominees-btn').addEventListener('click', async () => {
       const msg = document.getElementById('check-nominees-msg');
       msg.textContent = 'Checking inactivity & sending SMS…';
       msg.className = 'msg loading';
       try {
         const r = await api('/api/agent/check-nominees', { method: 'POST' });
-        const d = await r.json();
-        msg.textContent = d.message || ('SMS sent: ' + (d.sms_sent || 0));
-        msg.className = 'msg ok';
+        const d = await r.json().catch(() => ({}));
+        if (r.ok) {
+          msg.textContent = d.message || ('SMS sent: ' + (d.sms_sent ?? 0));
+          msg.className = 'msg ok';
+        } else {
+          msg.textContent = d.error || 'Check failed. Try again.';
+          msg.className = 'msg err';
+        }
       } catch (e) {
-        msg.textContent = e.message;
+        msg.textContent = e.message || 'Network error. Try again.';
         msg.className = 'msg err';
       }
     });
-
-    document.getElementById('timeout_days').addEventListener('change', function() {
-      var days = parseInt(this.value, 10);
-      var ledgers = days * 17280;
-      document.getElementById('timeout-ledgers-hint').textContent = '≈ ' + ledgers.toLocaleString() + ' ledgers (used when you deposit on-chain)';
-    });
-
-    // --- Connect wallet & Lock funds ---
-    const DAYS_TO_LEDGERS = { 7: 120960, 30: 518400, 90: 1555200 };
-    const FIVE_MIN_LEDGERS = 60;
-    let connectedPublicKey = null;
-
-    async function hasFreighter() {
-      try {
-        const api = window.freighterApi || window.freighter;
-        if (!api) return false;
-        const r = await (api.isConnected ? api.isConnected() : Promise.resolve({ isConnected: false }));
-        return r && (r.isConnected === true || r === true);
-      } catch (e) { return false; }
-    }
-
-    document.getElementById('connect-wallet-btn').addEventListener('click', async () => {
-      const btn = document.getElementById('connect-wallet-btn');
-      const addrEl = document.getElementById('connected-address');
-      const lockForm = document.getElementById('lock-form');
-      if (connectedPublicKey) {
-        connectedPublicKey = null;
-        btn.textContent = 'Connect wallet';
-        addrEl.textContent = '';
-        lockForm.style.setProperty('opacity', '0.7');
-        lockForm.style.setProperty('pointer-events', 'none');
-        return;
-      }
-      const api = window.freighterApi || window.freighter;
-      if (!api) {
-        addrEl.textContent = 'Install Freighter extension first.';
-        addrEl.style.color = 'var(--err)';
-        return;
-      }
-      addrEl.textContent = 'Opening Freighter… Check for a popup (allow it if blocked).';
-      addrEl.style.color = 'var(--muted)';
-      try {
-        const out = await (api.requestAccess ? api.requestAccess() : api.getPublicKey ? api.getPublicKey() : api.getAddress());
-        const key = (typeof out === 'string') ? out : (out && (out.publicKey || out.address));
-        if (!key) {
-          const errMsg = (out && out.error) ? out.error : (!out ? 'Freighter did not respond.' : 'No address returned.');
-          throw new Error(errMsg + ' Allow this site in Freighter and unblock popups, then try again.');
-        }
-        connectedPublicKey = key;
-        btn.textContent = 'Disconnect';
-        addrEl.textContent = key.slice(0, 6) + '…' + key.slice(-4);
-        addrEl.style.color = 'var(--muted)';
-        lockForm.style.setProperty('opacity', '1');
-        lockForm.style.setProperty('pointer-events', 'auto');
-      } catch (e) {
-        addrEl.textContent = e.message || 'Connection failed';
-        addrEl.style.color = 'var(--err)';
-      }
-    });
-
-    document.getElementById('lock-funds-btn').addEventListener('click', async () => {
-      const msgEl = document.getElementById('lock-msg');
-      if (!connectedPublicKey) {
-        msgEl.textContent = 'Connect wallet first.';
-        msgEl.className = 'msg err';
-        return;
-      }
-      const amount = parseInt(document.getElementById('lock_amount').value, 10);
-      const beneficiary = document.getElementById('lock_beneficiary').value.trim();
-      const lockTimeoutVal = document.getElementById('lock_timeout_days').value;
-      const timeoutLedgers = lockTimeoutVal === '5min' ? FIVE_MIN_LEDGERS : (DAYS_TO_LEDGERS[parseInt(lockTimeoutVal, 10)] || 518400);
-      const token = document.getElementById('lock_token').value.trim() || undefined;
-      if (!amount || amount < 1) {
-        msgEl.textContent = 'Enter a valid amount.';
-        msgEl.className = 'msg err';
-        return;
-      }
-      if (!beneficiary || beneficiary.length !== 56 || !beneficiary.startsWith('G')) {
-        msgEl.textContent = 'Enter a valid beneficiary address (G…, 56 chars).';
-        msgEl.className = 'msg err';
-        return;
-      }
-      msgEl.textContent = 'Building transaction…';
-      msgEl.className = 'msg loading';
-      try {
-        const buildRes = await api('/api/build-deposit', {
-          method: 'POST',
-          body: JSON.stringify({
-            depositor_public_key: connectedPublicKey,
-            beneficiary_address: beneficiary,
-            amount,
-            timeout_ledgers: timeoutLedgers,
-            token_address: token || undefined
-          })
-        });
-        const buildData = await buildRes.json();
-        if (!buildRes.ok) {
-          msgEl.textContent = buildData.error || 'Build failed';
-          msgEl.className = 'msg err';
-          return;
-        }
-        const txXdr = buildData.transaction_xdr;
-        if (!txXdr) {
-          msgEl.textContent = 'No transaction XDR returned';
-          msgEl.className = 'msg err';
-          return;
-        }
-        msgEl.textContent = 'Approve in Freighter…';
-        let networkPassphrase = 'Test SDF Network ; September 2015';
-        try {
-          const cfgRes = await fetch('/api/lock-config');
-          if (cfgRes.ok) {
-            const cfg = await cfgRes.json();
-            if (cfg.network_passphrase) networkPassphrase = cfg.network_passphrase;
-          }
-        } catch (_) {}
-        const freighterApi = window.freighterApi || window.freighter;
-        const signed = await (freighterApi.signTransaction ? freighterApi.signTransaction(txXdr, { networkPassphrase }) : Promise.reject(new Error('signTransaction not available')));
-        const signedXdr = signed && (signed.signedTransaction || signed.signedEnvelope || signed);
-        if (!signedXdr) {
-          msgEl.textContent = 'Signing cancelled or failed';
-          msgEl.className = 'msg err';
-          return;
-        }
-        msgEl.textContent = 'Submitting…';
-        const submitRes = await api('/api/submit', { method: 'POST', body: JSON.stringify({ signed_envelope_xdr: signedXdr }) });
-        const submitData = await submitRes.json();
-        if (!submitRes.ok) {
-          msgEl.textContent = submitData.error || 'Submit failed';
-          msgEl.className = 'msg err';
-          return;
-        }
-        msgEl.textContent = 'Submitted. Hash: ' + (submitData.hash || 'ok');
-        msgEl.className = 'msg ok';
-        loadStatus();
-      } catch (e) {
-        msgEl.textContent = e.message || 'Error';
-        msgEl.className = 'msg err';
-      }
-    });
-
-    loadStatus();
   </script>
 </body>
 </html>

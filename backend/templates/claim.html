@@ -78,7 +78,7 @@
 <body>
   <div class="wrap">
     <h1>Walletsurance Claim</h1>
-    <p class="tagline">You’ve been named as a nominee. Answer the question to unlock and sweep funds to your address.</p>
+    <p class="tagline">You’ve been named as a nominee. Answer the question to unlock and sweep funds to your Stellar address or bank account (mock).</p>
 
     <div id="load-err" class="card hidden">
       <p class="msg err" id="load-err-text"></p>
@@ -89,8 +89,35 @@
       <p id="question-text" style="margin: 0 0 1rem 0;"></p>
       <label for="answer">Your answer (unlocks the key only in this browser; we never see it)</label>
       <input type="password" id="answer" name="answer" placeholder="Enter the answer" autocomplete="off">
-      <label for="beneficiary">Receive funds at (Stellar address G…)</label>
-      <input type="text" id="beneficiary" name="beneficiary" placeholder="G..." maxlength="56">
+
+      <p style="margin: 1rem 0 0.5rem 0; color: var(--muted); font-size: 0.9rem;">How do you want to receive the funds?</p>
+      <div style="margin-bottom: 0.75rem;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="radio" name="receive_mode" value="stellar" checked>
+          <span>Receive in my Stellar wallet (G…)</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="radio" name="receive_mode" value="bank">
+          <span>Receive in my bank account (mock – we mimic the step)</span>
+        </label>
+      </div>
+
+      <div id="stellar-dest">
+        <label for="beneficiary">Stellar address to receive funds (G…)</label>
+        <input type="text" id="beneficiary" name="beneficiary" placeholder="G..." maxlength="56">
+      </div>
+      <div id="bank-dest" class="hidden" style="margin-top: 0.75rem;">
+        <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--muted);">We sweep to the Stellar address above, then request a bank payout (mock – no real API yet).</p>
+        <label for="bank_holder">Account holder name</label>
+        <input type="text" id="bank_holder" placeholder="Jane Doe">
+        <label for="bank_account">Account number</label>
+        <input type="text" id="bank_account" placeholder="1234567890">
+        <label for="bank_ifsc">IFSC code</label>
+        <input type="text" id="bank_ifsc" placeholder="SBIN0001234">
+        <label for="bank_name">Bank name (optional)</label>
+        <input type="text" id="bank_name" placeholder="Example Bank">
+      </div>
+
       <button type="button" id="claim-btn">Unlock &amp; claim</button>
       <div id="claim-msg" class="msg"></div>
     </div>
@@ -98,6 +125,10 @@
     <div id="loading" class="card">
       <p class="msg loading">Loading claim data…</p>
     </div>
+
+    <footer style="margin-top:2rem;text-align:center;color:var(--muted);font-size:0.85rem;">
+      <a href="/" style="color:var(--accent);text-decoration:none;">← Back to Walletsurance</a>
+    </footer>
   </div>
 
   <script>
@@ -129,8 +160,21 @@
         if (data.beneficiary_stellar_address) benInput.value = data.beneficiary_stellar_address;
         if (!data.account) {
           const q = document.getElementById('question-text');
-          q.innerHTML = q.textContent + ' <span style="color:var(--warn);font-size:0.9rem;">(Depositor account not found on network; claim may fail.)</span>';
+          q.innerHTML = q.textContent + ' <span style="color:var(--warn);font-size:0.9rem;">(Depositor account not found on network.)</span>';
+          document.getElementById('claim-btn').disabled = true;
+          document.getElementById('claim-msg').textContent = 'Cannot claim: depositor account not found on network.';
+          document.getElementById('claim-msg').className = 'msg err';
         }
+        document.querySelectorAll('input[name="receive_mode"]').forEach(function (radio) {
+          radio.addEventListener('change', function () {
+            const bank = document.getElementById('bank-dest');
+            if (this.value === 'bank') {
+              bank.classList.remove('hidden');
+            } else {
+              bank.classList.add('hidden');
+            }
+          });
+        });
       }
 
       function str2ab(s) {
@@ -212,6 +256,7 @@
           networkPassphrase: networkPassphrase,
         });
         let opCount = 0;
+        let nativeXlmAmount = '0';
         for (const bal of account.balances) {
           if (bal.asset_type === 'native') {
             const { whole, frac } = parseStellarDecimal(bal.balance);
@@ -219,6 +264,7 @@
             if (stroops <= reserveStroops) continue;
             const spendableStroops = stroops - BigInt(reserveStroops);
             const amountStr = fromStroops(spendableStroops);
+            nativeXlmAmount = amountStr;
             builder.addOperation(StellarSdk.Operation.payment({
               destination: beneficiaryAddress,
               asset: StellarSdk.Asset.native(),
@@ -242,12 +288,13 @@
         if (opCount === 0) throw new Error('No spendable balance to sweep (native may be below reserve).');
         const tx = builder.setTimeout(180).build();
         tx.sign(keypair);
-        return tx.toEnvelope().toXDR('base64');
+        return { xdr: tx.toEnvelope().toXDR('base64'), nativeXlmAmount: nativeXlmAmount };
       }
 
       document.getElementById('claim-btn').addEventListener('click', async function () {
         const msgEl = document.getElementById('claim-msg');
         const answer = document.getElementById('answer').value.trim();
+        const receiveMode = document.querySelector('input[name="receive_mode"]:checked').value;
         const beneficiary = document.getElementById('beneficiary').value.trim();
         if (!answer) {
           msgEl.textContent = 'Enter the answer.';
@@ -255,9 +302,19 @@
           return;
         }
         if (!beneficiary || beneficiary.length !== 56 || !beneficiary.startsWith('G')) {
-          msgEl.textContent = 'Enter a valid Stellar address (G…, 56 characters).';
+          msgEl.textContent = 'Enter a valid Stellar address (G…, 56 characters). Funds will be swept to this address.';
           msgEl.className = 'msg err';
           return;
+        }
+        if (receiveMode === 'bank') {
+          const holder = document.getElementById('bank_holder').value.trim();
+          const acc = document.getElementById('bank_account').value.trim();
+          const ifsc = document.getElementById('bank_ifsc').value.trim();
+          if (!holder || !acc || !ifsc) {
+            msgEl.textContent = 'Fill account holder name, account number, and IFSC for bank payout.';
+            msgEl.className = 'msg err';
+            return;
+          }
         }
         msgEl.textContent = 'Unlocking…';
         msgEl.className = 'msg loading';
@@ -265,7 +322,9 @@
         try {
           const secretKey = await unlockSecret(answer);
           msgEl.textContent = 'Building sweep transaction…';
-          const signedXdr = await buildSweepTransaction(secretKey, beneficiary);
+          const result = await buildSweepTransaction(secretKey, beneficiary);
+          const signedXdr = result.xdr;
+          const nativeXlmAmount = result.nativeXlmAmount || '0';
           msgEl.textContent = 'Submitting…';
           const r = await fetch('/api/claim/submit', {
             method: 'POST',
@@ -274,8 +333,33 @@
           });
           const data = await r.json().catch(() => ({}));
           if (r.ok && data.status === 'success') {
-            msgEl.textContent = 'Success! Transaction hash: ' + (data.hash || 'submitted');
-            msgEl.className = 'msg ok';
+            if (receiveMode === 'bank') {
+              msgEl.textContent = 'Sweep done. Requesting bank payout (mock)…';
+              const offRes = await fetch('/api/claim/offramp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  claim_token: claimToken,
+                  bank_account_holder: document.getElementById('bank_holder').value.trim(),
+                  bank_account_number: document.getElementById('bank_account').value.trim(),
+                  bank_ifsc: document.getElementById('bank_ifsc').value.trim(),
+                  bank_name: document.getElementById('bank_name').value.trim(),
+                  amount_xlm: nativeXlmAmount,
+                }),
+              });
+              const offData = await offRes.json().catch(() => ({}));
+              if (offRes.ok && offData.status === 'success') {
+                const amt = offData.amount_inr_mock != null ? String(offData.amount_inr_mock) : '';
+                msgEl.textContent = 'Sweep successful. ' + (offData.message || '') + ' Order: ' + (offData.order_id || '') + '. Account: ' + (offData.bank_account_masked || '') + (amt ? ', ~₹' + amt + ' (mock).' : ' (mock).');
+                msgEl.className = 'msg ok';
+              } else {
+                msgEl.textContent = 'Sweep done. Bank payout error: ' + (offData.error || 'unknown');
+                msgEl.className = 'msg err';
+              }
+            } else {
+              msgEl.textContent = 'Success! Transaction hash: ' + (data.hash || 'submitted');
+              msgEl.className = 'msg ok';
+            }
           } else {
             msgEl.textContent = data.error || 'Submit failed';
             msgEl.className = 'msg err';

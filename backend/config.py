@@ -32,3 +32,8 @@ TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER", "").strip()
 
 # Base URL for claim links in SMS (e.g. https://your-app.run.app)
 CLAIM_BASE_URL = os.environ.get("CLAIM_BASE_URL", "").strip()
+
+# When nominee chooses "Send to bank", swept funds go to this address; then we call Onmeta to send fiat to their bank.
+PLATFORM_SWEEP_PUBLIC_KEY = os.environ.get("PLATFORM_SWEEP_PUBLIC_KEY", "").strip()
+# Rough XLM → INR for off-ramp (e.g. 10); used when creating Onmeta order from amount_xlm.
+RATE_XLM_TO_INR = float(os.environ.get("RATE_XLM_TO_INR", "10").strip() or "10")

@@ -184,7 +184,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
-        const d = await r.json();
+        const d = await r.json().catch(() => ({}));
         if (r.ok) {
           msgEl.textContent = 'Secondary key created. Add the key below as a signer to your account.';
           msgEl.className = 'msg ok';

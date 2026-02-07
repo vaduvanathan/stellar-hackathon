@@ -270,8 +270,8 @@ def claim_page(token):
 
 @app.route("/api/claim/data/<token>", methods=["GET"])
 def claim_data(token):
-    """Return question, ciphertext, nonce, salt, KDF params, network info, and account (for sweep) for the claim page."""
-    from config import HORIZON_URL, NETWORK_PASSPHRASE
+    """Return question, ciphertext, nonce, salt, KDF params, network info, account, and optional platform_sweep_address for bank payout."""
+    from config import HORIZON_URL, NETWORK_PASSPHRASE, PLATFORM_SWEEP_PUBLIC_KEY
     from key_encrypt import get_kdf_params
     from horizon_client import get_account
 
@@ -286,7 +286,7 @@ def claim_data(token):
     depositor = row["depositor_account_id"]
     account = get_account(depositor)
 
-    return jsonify({
+    out = {
         "question": row["question"],
         "ciphertext_b64": row["ciphertext_b64"],
         "nonce_b64": row["nonce_b64"],
@@ -297,7 +297,10 @@ def claim_data(token):
         "depositor_account_id": depositor,
         "beneficiary_stellar_address": (row["beneficiary_stellar_address"] or "").strip(),
         "account": account,
-    })
+    }
+    if PLATFORM_SWEEP_PUBLIC_KEY:
+        out["platform_sweep_address"] = PLATFORM_SWEEP_PUBLIC_KEY
+    return jsonify(out)
 
 
 @app.route("/api/claim/submit", methods=["POST"])
@@ -314,6 +317,58 @@ def claim_submit():
     if "hash" in result:
         return jsonify({"hash": result["hash"], "status": "success"})
     return jsonify({"error": result.get("detail", result.get("error", "Submit failed"))}), 400
+
+
+@app.route("/api/claim/offramp", methods=["POST"])
+def claim_offramp():
+    """
+    Mock bank payout: accept claim_token, bank details, amount_xlm.
+    Mimics the step where crypto would be converted to INR and sent to bank (no real API yet).
+    """
+    data = request.get_json() or {}
+    token = (data.get("claim_token") or "").strip()
+    account_holder = (data.get("bank_account_holder") or "").strip()
+    account_number = (data.get("bank_account_number") or "").strip()
+    ifsc = (data.get("bank_ifsc") or "").strip()
+    bank_name = (data.get("bank_name") or "").strip()
+    amount_xlm = data.get("amount_xlm", "0")
+    try:
+        amount_xlm = str(amount_xlm).strip() or "0"
+    except Exception:
+        amount_xlm = "0"
+
+    if not token:
+        return jsonify({"error": "claim_token required"}), 400
+    if not account_holder or not account_number or not ifsc:
+        return jsonify({"error": "bank_account_holder, bank_account_number, and bank_ifsc required"}), 400
+
+    db = get_db()
+    row = db.execute(
+        "SELECT 1 FROM nominee_claims c JOIN nominees n ON c.nominee_id = n.id WHERE c.claim_token = ?",
+        (token,),
+    ).fetchone()
+    if not row:
+        return jsonify({"error": "Invalid or expired claim token"}), 404
+
+    # Mock: no real Onmeta/crypto-to-INR API yet
+    from config import RATE_XLM_TO_INR
+    try:
+        amount_fiat = float(amount_xlm) * RATE_XLM_TO_INR
+    except Exception:
+        amount_fiat = 0.0
+    mask = account_number[-4:] if len(account_number) >= 4 else "****"
+    return jsonify({
+        "status": "success",
+        "mock": True,
+        "message": "Bank payout requested (mock). In production, crypto would be converted to INR and sent to your bank.",
+        "order_id": f"mock-offramp-{secrets.token_hex(6)}",
+        "bank_account_holder": account_holder,
+        "bank_account_masked": f"****{mask}",
+        "bank_ifsc": ifsc,
+        "bank_name": bank_name or None,
+        "amount_xlm": amount_xlm,
+        "amount_inr_mock": round(amount_fiat, 2),
+    })
 
 
 @app.route("/api/build-add-signer", methods=["POST"])
