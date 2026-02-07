@@ -14,6 +14,15 @@ _backend_dir = Path(__file__).resolve().parent
 if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))
 
+# Fail fast if critical modules are missing (e.g. Docker image built with wrong context)
+try:
+    import key_encrypt  # noqa: F401
+except ImportError as e:
+    raise RuntimeError(
+        f"Missing key_encrypt module. Ensure backend/ is the Docker build context: "
+        f"docker build -f backend/Dockerfile backend/  (error: {e})"
+    ) from e
+
 # Load .env so config (and Twilio, etc.) get env vars when running Flask
 try:
     from dotenv import load_dotenv
