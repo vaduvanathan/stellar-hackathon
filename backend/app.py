@@ -454,7 +454,6 @@ def build_add_signer():
     try:
         from config import HORIZON_URL, NETWORK_PASSPHRASE
         from stellar_sdk import Server, Signer, TransactionBuilder
-        from stellar_sdk.transaction_envelope import TransactionEnvelope
     except ImportError as e:
         return jsonify({"error": f"Missing dependency: {e}"}), 503
 
@@ -480,7 +479,8 @@ def build_add_signer():
 
     try:
         secondary_signer = Signer.ed25519_public_key(signer_public_key, 1)
-        tx = (
+        # TransactionBuilder.build() returns a TransactionEnvelope (SDK 11/13), not a Transaction — use it directly.
+        envelope = (
             TransactionBuilder(
                 source_account=source,
                 network_passphrase=NETWORK_PASSPHRASE,
@@ -490,10 +490,6 @@ def build_add_signer():
             .set_timeout(180)
             .build()
         )
-        # Ensure transaction is v1 so to_xdr_object() works (SDK 11/12/13 use transaction.v1)
-        if hasattr(tx, "v1"):
-            tx.v1 = True
-        envelope = TransactionEnvelope(transaction=tx, network_passphrase=NETWORK_PASSPHRASE)
         if hasattr(envelope, "to_transaction_envelope_v1"):
             envelope = envelope.to_transaction_envelope_v1()
         xdr_b64 = _envelope_to_xdr_base64(envelope)
