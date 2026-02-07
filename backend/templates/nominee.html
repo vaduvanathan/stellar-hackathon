@@ -148,7 +148,7 @@
       </div>
       <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text);"><strong>Add this key as a signer</strong></p>
       <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--muted);">Use <strong>Set Options</strong>: signer = the key above, weight = 1. You can build the transaction in Stellar Lab or sign it here with Freighter.</p>
-      <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--warn);">Click <strong>Connect wallet</strong> first so Freighter shows &quot;Confirm&quot; when you sign. Then click <strong>Build &amp; sign here</strong>.</p>
+      <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--warn);">Click <strong>Connect wallet</strong> first — a Freighter popup may open; click <strong>Allow</strong> in the popup. Then click <strong>Build &amp; sign here</strong>.</p>
       <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
         <button type="button" id="connect-wallet-btn" class="primary" style="background: var(--accent-dim); color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Connect wallet (Freighter)</button>
         <span id="connect-status" style="font-size: 0.9rem; color: var(--muted);"></span>
@@ -196,23 +196,32 @@
           statusEl.style.color = 'var(--warn)';
           return;
         }
-        var res = await api.requestAccess().catch(function (e) { return { error: e }; });
-        if (res && res.address) {
+        var res = await api.requestAccess().catch(function (e) { return { error: e && (e.message || String(e)) }; });
+        if (res && res.error) {
+          statusEl.textContent = 'Freighter: ' + (typeof res.error === 'string' ? res.error : 'User denied or error');
+          statusEl.style.color = 'var(--err)';
+          return;
+        }
+        if (res && res.address && res.address.length > 0) {
           statusEl.textContent = 'Connected: ' + res.address.slice(0, 8) + '… Now click "Build & sign here".';
           statusEl.style.color = 'var(--accent)';
-        } else if (typeof api.setAllowed === 'function') {
-          var setRes = await api.setAllowed().catch(function (e) { return { isAllowed: false }; });
+          return;
+        }
+        if (typeof api.setAllowed === 'function') {
+          var setRes = await api.setAllowed().catch(function (e) { return { isAllowed: false, error: e }; });
           if (setRes && setRes.isAllowed) {
             statusEl.textContent = 'Connected. Now click "Build & sign here".';
             statusEl.style.color = 'var(--accent)';
-          } else {
-            statusEl.textContent = 'Connection cancelled or denied. Allow this site in Freighter and try again.';
-            statusEl.style.color = 'var(--err)';
+            return;
           }
-        } else {
-          statusEl.textContent = 'Connection cancelled or denied. Allow this site in Freighter and try again.';
-          statusEl.style.color = 'var(--err)';
+          if (setRes && setRes.error) {
+            statusEl.textContent = 'Freighter: ' + (setRes.error.message || String(setRes.error));
+            statusEl.style.color = 'var(--err)';
+            return;
+          }
         }
+        statusEl.textContent = 'No address returned. Sign into Freighter (unlock wallet), then click Connect again. If a Freighter popup appeared, click Allow.';
+        statusEl.style.color = 'var(--err)';
       } catch (e) {
         statusEl.textContent = (e && e.message) || 'Connection failed';
         statusEl.style.color = 'var(--err)';
