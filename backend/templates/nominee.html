@@ -221,9 +221,9 @@
             signer_public_key: signerPublicKey,
           }),
         });
-        const buildData = await buildRes.json();
+        const buildData = await buildRes.json().catch(() => ({}));
         if (!buildRes.ok) {
-          msgEl.textContent = buildData.error || 'Build failed';
+          msgEl.textContent = buildData.error || (buildRes.status === 500 ? 'Server error (500). Try Option B (Stellar Laboratory) to add the signer.' : 'Build failed');
           msgEl.className = 'msg err';
           return;
         }
@@ -261,12 +261,12 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ signed_envelope_xdr: signedXdr }),
         });
-        const submitData = await submitRes.json();
+        const submitData = await submitRes.json().catch(() => ({}));
         if (submitRes.ok && submitData.status === 'success') {
           msgEl.textContent = 'Done! Co-signer added. Transaction: ' + (submitData.hash || '');
           msgEl.className = 'msg ok';
         } else {
-          msgEl.textContent = submitData.error || 'Submit failed';
+          msgEl.textContent = submitData.error || (submitRes.status === 500 ? 'Server error (500).' : 'Submit failed');
           msgEl.className = 'msg err';
         }
       } catch (e) {

@@ -388,6 +388,21 @@ def claim_offramp():
     })
 
 
+def _envelope_to_xdr_base64(envelope):
+    """Get base64 XDR string from TransactionEnvelope (works across stellar_sdk versions)."""
+    if hasattr(envelope, "to_xdr") and callable(getattr(envelope, "to_xdr")):
+        return envelope.to_xdr()
+    import base64
+    xdr_obj = envelope.to_xdr_object()
+    try:
+        from xdrlib3 import Packer
+    except ImportError:
+        from xdrlib import Packer
+    p = Packer()
+    xdr_obj.pack(p)
+    return base64.b64encode(p.get_buffer()).decode("ascii")
+
+
 @app.route("/api/build-add-signer", methods=["POST"])
 def build_add_signer():
     """
@@ -395,14 +410,13 @@ def build_add_signer():
     Body: account_public_key (your main account G...), signer_public_key (the secondary key to add).
     Returns transaction_xdr for the user to sign with their wallet (e.g. Freighter) and submit via /api/claim/submit.
     """
-    from config import NETWORK_PASSPHRASE
-    from horizon_client import get_account
-
     try:
-        from stellar_sdk import Account, Network, Signer, TransactionBuilder
+        from config import NETWORK_PASSPHRASE
+        from horizon_client import get_account
+        from stellar_sdk import Account, Signer, TransactionBuilder
         from stellar_sdk.transaction_envelope import TransactionEnvelope
-    except ImportError:
-        return jsonify({"error": "stellar_sdk not available"}), 503
+    except ImportError as e:
+        return jsonify({"error": f"Missing dependency: {e}"}), 503
 
     data = request.get_json() or {}
     account_public_key = (data.get("account_public_key") or "").strip()
@@ -422,20 +436,24 @@ def build_add_signer():
     except (TypeError, ValueError):
         return jsonify({"error": "Invalid account sequence"}), 500
 
-    source = Account(account_id=account_public_key, sequence=sequence)
-    secondary_signer = Signer.ed25519_public_key(account_id=signer_public_key, weight=1)
-    tx = (
-        TransactionBuilder(
-            source_account=source,
-            network_passphrase=NETWORK_PASSPHRASE,
-            base_fee=100,
+    try:
+        source = Account(account_id=account_public_key, sequence=sequence)
+        secondary_signer = Signer.ed25519_public_key(account_id=signer_public_key, weight=1)
+        tx = (
+            TransactionBuilder(
+                source_account=source,
+                network_passphrase=NETWORK_PASSPHRASE,
+                base_fee=100,
+            )
+            .append_set_options_op(signer=secondary_signer)
+            .set_timeout(180)
+            .build()
         )
-        .append_set_options_op(signer=secondary_signer)
-        .set_timeout(180)
-        .build()
-    )
-    envelope = TransactionEnvelope(transaction=tx, network_passphrase=NETWORK_PASSPHRASE)
-    return jsonify({"transaction_xdr": envelope.to_xdr()})
+        envelope = TransactionEnvelope(transaction=tx, network_passphrase=NETWORK_PASSPHRASE)
+        xdr_b64 = _envelope_to_xdr_base64(envelope)
+        return jsonify({"transaction_xdr": xdr_b64})
+    except Exception as e:
+        return jsonify({"error": f"Build failed: {e}"}), 500
 
 
 @app.route("/api/contract/status", methods=["GET"])
