@@ -449,16 +449,72 @@ def _envelope_to_xdr_base64(envelope):
     return base64.b64encode(raw).decode("ascii")
 
 
+@app.route("/api/horizon/account/<account_id>", methods=["GET"])
+def horizon_account(account_id):
+    """
+    Horizon API example: get account by public key (raw Horizon response).
+    Uses GET {HORIZON_URL}/accounts/{account_id}. No SDK in frontend needed.
+    """
+    from horizon_client import get_account
+    acc = get_account(account_id.strip())
+    if not acc:
+        return jsonify({"error": "Account not found"}), 404
+    return jsonify(acc)
+
+
 @app.route("/api/build-add-signer", methods=["POST"])
 def build_add_signer():
     """
-    Legacy: add-signer is now built in the browser (nominee page). If old cached
-    frontend still calls this, return a clear message to refresh the page.
+    Build an unsigned Set Options (add signer) transaction. Uses Horizon REST for
+    account data and Python stellar_sdk only in the backend. Frontend gets
+    transaction_xdr and signs with Freighter, then submits via /api/claim/submit.
+    Body: account_public_key (G...), signer_public_key (secondary key to add).
     """
-    return jsonify({
-        "error": "Please refresh the nominee page (Ctrl+F5 or Cmd+Shift+R) to add the co-signer. The button now builds the transaction in your browser.",
-        "refresh_required": True,
-    }), 400
+    try:
+        from config import NETWORK_PASSPHRASE
+        from horizon_client import get_account
+        from stellar_sdk import Account, Signer, TransactionBuilder
+    except ImportError as e:
+        return jsonify({"error": f"Missing dependency: {e}"}), 503
+
+    data = request.get_json() or {}
+    account_public_key = (data.get("account_public_key") or "").strip()
+    signer_public_key = (data.get("signer_public_key") or "").strip()
+    if not account_public_key or not signer_public_key:
+        return jsonify({"error": "account_public_key and signer_public_key required"}), 400
+    if len(account_public_key) != 56 or not account_public_key.startswith("G"):
+        return jsonify({"error": "account_public_key must be a Stellar public key (G..., 56 chars)"}), 400
+    if len(signer_public_key) != 56 or not signer_public_key.startswith("G"):
+        return jsonify({"error": "signer_public_key must be a Stellar public key (G..., 56 chars)"}), 400
+
+    acc = get_account(account_public_key)
+    if not acc:
+        return jsonify({"error": "Account not found on network (check Horizon URL and that account exists)"}), 404
+    try:
+        sequence = int(acc["sequence"])
+    except (TypeError, ValueError, KeyError):
+        return jsonify({"error": "Invalid account sequence from Horizon"}), 500
+
+    try:
+        source = Account(account_public_key, sequence)
+        signer = Signer.ed25519_public_key(signer_public_key, 1)
+        builder = (
+            TransactionBuilder(
+                source_account=source,
+                network_passphrase=NETWORK_PASSPHRASE,
+                base_fee=100,
+            )
+            .append_set_options_op(signer=signer)
+            .set_timeout(180)
+        )
+        envelope = builder.build()
+        if hasattr(envelope, "to_transaction_envelope_v1"):
+            envelope = envelope.to_transaction_envelope_v1()
+        xdr_b64 = _envelope_to_xdr_base64(envelope)
+        return jsonify({"transaction_xdr": xdr_b64})
+    except Exception as e:
+        logger.exception("build_add_signer failed")
+        return jsonify({"error": f"Build failed: {e}", "where": "build_or_serialize"}), 500
 
 
 @app.route("/api/contract/status", methods=["GET"])

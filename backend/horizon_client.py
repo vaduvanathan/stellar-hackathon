@@ -43,12 +43,12 @@ def get_last_activity(account_id: str) -> str | None:
 
 def submit_transaction(envelope_xdr: str) -> dict:
     """
-    Submit a classic transaction envelope to Horizon. Returns Horizon response dict.
+    Submit a signed classic transaction envelope to Horizon. Returns Horizon response dict.
+    Horizon expects POST body: tx=<base64_xdr> (application/x-www-form-urlencoded).
     """
     r = requests.post(
         f"{HORIZON_URL}/transactions",
-        data=envelope_xdr,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        data={"tx": envelope_xdr.strip()},
         timeout=30,
     )
     try:

@@ -97,7 +97,6 @@
     footer { margin-top: 2rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
     footer a { color: var(--accent); text-decoration: none; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/stellar-sdk@11.2.0/dist/stellar-sdk.min.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@stellar/freighter-api@2.0.0/build/index.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -143,12 +142,13 @@
         <div class="label">Your secondary key — add this as a signer to your account</div>
         <code class="mono" id="sweep-public-key"></code>
       </div>
-      <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text);"><strong>Option A — Add as co-signer with Freighter (easiest)</strong></p>
-      <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--muted);">Use the same Stellar account as in the form above. Click the button below; Freighter will open for you to sign one transaction that adds this key as a signer.</p>
-      <button type="button" id="add-signer-btn" class="secondary" style="margin-top: 0.5rem; background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer;">Add as co-signer with Freighter</button>
-      <div id="add-signer-msg" class="msg"></div>
-      <p style="margin-top: 1.25rem; font-size: 0.9rem; color: var(--text);"><strong>Option B — Do it manually in Stellar Laboratory</strong></p>
-      <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--muted);">Go to <a href="https://laboratory.stellar.org/#account-viewer?network=test" target="_blank" rel="noopener" style="color: var(--accent);">Stellar Laboratory → Account Viewer</a> (Test network). Enter your account, then go to “Signers” and add the key above as a new signer with weight 1.</p>
+      <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text);"><strong>Add this key as a signer</strong></p>
+      <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--muted);">Use <strong>Set Options</strong>: signer = the key above, weight = 1. You can build the transaction in Stellar Lab or sign it here with Freighter.</p>
+      <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        <a id="open-lab-btn" href="https://lab.stellar.org/transaction/build" target="_blank" rel="noopener" class="secondary" style="display: inline-block; background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; text-decoration: none; font-size: 0.95rem; font-weight: 600;">Open Stellar Lab → Build transaction</a>
+        <button type="button" id="add-signer-btn" class="secondary" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Build & sign here (Freighter)</button>
+      </div>
+      <div id="add-signer-msg" class="msg" style="margin-top: 0.5rem;"></div>
     </section>
 
     <footer>
@@ -202,125 +202,80 @@
       }
     });
 
-    function waitForStellarSdk(maxMs) {
-      return new Promise(function (resolve) {
-        if (window.StellarSdk && window.StellarSdk.Server) {
-          resolve(window.StellarSdk);
-          return;
-        }
-        var start = Date.now();
-        var t = setInterval(function () {
-          if (window.StellarSdk && window.StellarSdk.Server) {
-            clearInterval(t);
-            resolve(window.StellarSdk);
-            return;
-          }
-          if (Date.now() - start >= (maxMs || 5000)) {
-            clearInterval(t);
-            resolve(null);
-          }
-        }, 100);
-      });
-    }
-
-    function loadStellarSdkScript() {
-      return new Promise(function (resolve, reject) {
-        if (document.querySelector('script[src*="stellar-sdk"]')) {
-          resolve();
-          return;
-        }
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/stellar-sdk@11.2.0/dist/stellar-sdk.min.js';
-        s.crossOrigin = 'anonymous';
-        s.onload = resolve;
-        s.onerror = function () { reject(new Error('Failed to load Stellar SDK')); };
-        document.head.appendChild(s);
-      });
-    }
+    document.getElementById('open-lab-btn').addEventListener('click', function (e) {
+      this.href = 'https://lab.stellar.org/transaction/build';
+    });
 
     document.getElementById('add-signer-btn').addEventListener('click', async function () {
-      const msgEl = document.getElementById('add-signer-msg');
-      const accountPublicKey = document.getElementById('nominee_depositor').value.trim();
-      const signerPublicKey = document.getElementById('sweep-public-key').textContent.trim();
+      var msgEl = document.getElementById('add-signer-msg');
+      var accountPublicKey = document.getElementById('nominee_depositor').value.trim();
+      var signerPublicKey = document.getElementById('sweep-public-key').textContent.trim();
       if (!accountPublicKey || !signerPublicKey) {
         msgEl.textContent = 'Your Stellar account and the secondary key above are required.';
         msgEl.className = 'msg err';
         return;
       }
-      msgEl.textContent = 'Loading…';
+      msgEl.textContent = 'Building transaction…';
       msgEl.className = 'msg loading';
       try {
-        var StellarSdk = await waitForStellarSdk(6000);
-        if (!StellarSdk || !StellarSdk.Server) {
-          msgEl.textContent = 'Loading Stellar SDK…';
-          try {
-            await loadStellarSdkScript();
-            StellarSdk = await waitForStellarSdk(5000);
-          } catch (_) {}
-        }
-        if (!StellarSdk || !StellarSdk.Server) {
-          msgEl.textContent = 'Stellar SDK did not load. Check your connection, disable ad blockers for this site, then refresh the page.';
+        var buildRes = await fetch('/api/build-add-signer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_public_key: accountPublicKey,
+            signer_public_key: signerPublicKey,
+          }),
+        });
+        var buildData = await buildRes.json().catch(function () { return {}; });
+        if (!buildRes.ok) {
+          msgEl.textContent = buildData.error || 'Build failed. Try "Open Stellar Lab" to add the signer manually.';
           msgEl.className = 'msg err';
           return;
         }
-        msgEl.textContent = 'Building transaction…';
-        msgEl.className = 'msg loading';
-        let networkPassphrase = 'Test SDF Network ; September 2015';
-        let horizonUrl = 'https://horizon-testnet.stellar.org';
+        var txXdr = buildData.transaction_xdr;
+        if (!txXdr) {
+          msgEl.textContent = 'No transaction returned from server.';
+          msgEl.className = 'msg err';
+          return;
+        }
+        var networkPassphrase = 'Test SDF Network ; September 2015';
         try {
-          const cfgRes = await fetch('/api/lock-config');
+          var cfgRes = await fetch('/api/lock-config');
           if (cfgRes.ok) {
-            const cfg = await cfgRes.json();
+            var cfg = await cfgRes.json();
             if (cfg.network_passphrase) networkPassphrase = cfg.network_passphrase;
-            if (cfg.horizon_url) horizonUrl = cfg.horizon_url.replace(/\/$/, '');
           }
         } catch (_) {}
-        var server = new StellarSdk.Server(horizonUrl);
-        var sourceAccount = await server.loadAccount(accountPublicKey);
-        var fee = (typeof StellarSdk.BASE_FEE !== 'undefined') ? StellarSdk.BASE_FEE : 100;
-        var builder = new StellarSdk.TransactionBuilder(sourceAccount, {
-          fee: String(fee),
-          networkPassphrase: networkPassphrase,
-        });
-        builder.addOperation(StellarSdk.Operation.setOptions({
-          signer: {
-            ed25519PublicKey: signerPublicKey,
-            weight: 1,
-          },
-        }));
-        var tx = builder.setTimeout(180).build();
-        var txXdr = tx.toEnvelope().toXDR('base64');
         msgEl.textContent = 'Open Freighter to sign…';
-        msgEl.className = 'msg loading';
-        const freighterApi = window.freighterApi || window.freighter;
+        var freighterApi = window.freighterApi || window.freighter;
         if (!freighterApi || !freighterApi.signTransaction) {
-          msgEl.textContent = 'Freighter extension not found. Use Option B (Stellar Laboratory) instead.';
+          msgEl.textContent = 'Freighter extension not found. Use "Open Stellar Lab" to build and sign there.';
           msgEl.className = 'msg err';
           return;
         }
-        const signed = await freighterApi.signTransaction(txXdr, { networkPassphrase: networkPassphrase });
-        const signedXdr = signed && (signed.signedTransaction || signed.signedEnvelope || signed);
+        var signed = await freighterApi.signTransaction(txXdr, { networkPassphrase: networkPassphrase });
+        var signedXdr = signed && (signed.signedTransaction || signed.signedEnvelope || signed);
         if (!signedXdr) {
           msgEl.textContent = 'Signing cancelled or failed.';
           msgEl.className = 'msg err';
           return;
         }
         msgEl.textContent = 'Submitting…';
-        const submitRes = await fetch('/api/claim/submit', {
+        var submitRes = await fetch('/api/claim/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ signed_envelope_xdr: signedXdr }),
         });
-        const submitData = await submitRes.json().catch(() => ({}));
+        var submitData = await submitRes.json().catch(function () { return {}; });
         if (submitRes.ok && submitData.status === 'success') {
           msgEl.textContent = 'Done! Co-signer added. Transaction: ' + (submitData.hash || '');
           msgEl.className = 'msg ok';
         } else {
-          msgEl.textContent = submitData.error || (submitRes.status === 500 ? 'Server error (500).' : 'Submit failed');
+          msgEl.textContent = submitData.error || (submitRes.status === 500 ? 'Server error.' : 'Submit failed');
           msgEl.className = 'msg err';
         }
       } catch (e) {
-        msgEl.textContent = (e.message || e) + (e.response ? ' (check account exists on this network)' : '');
+        msgEl.textContent = (e.message || String(e)) + '. Try "Open Stellar Lab" to add the signer manually.';
         msgEl.className = 'msg err';
       }
     });
