@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Walletsurance</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23238636' width='32' height='32' rx='6'/><path fill='%23fff' d='M16 6l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z'/></svg>" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -117,7 +118,9 @@
 
     <section class="card">
       <h2>Lock funds</h2>
-      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">Connect your Stellar wallet (e.g. Freighter), then lock tokens in the contract. You must <strong>ping</strong> before the inactivity period ends to keep the funds.</p>
+      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">Connect your <strong>Stellar</strong> wallet (Freighter only). You must <strong>ping</strong> before the inactivity period ends to keep the funds.</p>
+      <p style="margin: 0 0 0.75rem 0; font-size: 0.8rem; color: var(--warn);"><strong>Use Testnet:</strong> Open the Freighter extension → switch the network dropdown to <strong>Testnet</strong> (not Mainnet). Then come back and click Connect wallet.</p>
+      <p style="margin: 0 0 0.75rem 0; font-size: 0.75rem; color: var(--muted);">Ignore any &quot;MetaMask&quot; error in the console — this app uses Freighter (Stellar), not MetaMask. When you click Connect, <strong>approve the Freighter popup</strong> to allow this site.</p>
       <div style="margin-bottom: 1rem;">
         <button type="button" id="connect-wallet-btn" class="secondary">Connect wallet</button>
         <span id="connected-address" class="mono" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--muted);"></span>
@@ -299,8 +302,11 @@
       }
       try {
         const out = await (api.requestAccess ? api.requestAccess() : api.getPublicKey ? api.getPublicKey() : api.getAddress());
-        const key = out && (out.publicKey || out.address);
-        if (!key) throw new Error(out?.error || 'No address returned');
+        const key = (typeof out === 'string') ? out : (out && (out.publicKey || out.address));
+        if (!key) {
+          const errMsg = (out && out.error) ? out.error : (!out ? 'Freighter did not respond. Approve the connection in the extension popup.' : 'No address returned. Try approving the site in Freighter.');
+          throw new Error(errMsg);
+        }
         connectedPublicKey = key;
         btn.textContent = 'Disconnect';
         addrEl.textContent = key.slice(0, 6) + '…' + key.slice(-4);
