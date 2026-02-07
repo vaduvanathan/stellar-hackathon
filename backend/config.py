@@ -11,3 +11,8 @@ NETWORK_PASSPHRASE = os.environ.get(
 )
 # Deployed inheritance contract ID (set after deploy)
 CONTRACT_ID = os.environ.get("CONTRACT_ID", "").strip()
+
+# Onmeta Off-Ramp (https://documenter.getpostman.com/view/20857383/UzXNTwpM)
+# Leave empty to use built-in mock. Set to https://api.onmeta.in (or staging) for real.
+ONMETA_BASE_URL = os.environ.get("ONMETA_BASE_URL", "").strip()
+ONMETA_API_KEY = os.environ.get("ONMETA_API_KEY", "").strip()

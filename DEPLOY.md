@@ -1,5 +1,14 @@
 # Deploy Walletsurance to Google Cloud Run + run the agent
 
+## Onmeta Off-Ramp (mock now, real later)
+
+- **Mock API** (same shape as [Onmeta Off-Ramp API](https://documenter.getpostman.com/view/20857383/UzXNTwpM)):
+  - **POST /api/mock-onmeta/create-order** – body: `sellTokenSymbol`, `chainId`, `fiatCurrency`, `fiatAmount`, `paymentMode`, `bankDetails` (accountNumber, accountName, ifsc). Returns mock `orderId` and `status`.
+- **Client:** `onmeta_client.create_offramp_order()` – if `ONMETA_BASE_URL` and `ONMETA_API_KEY` are set, calls real Onmeta; otherwise returns mock. Agent uses this when running off-ramp after a claim.
+- **Real Onmeta:** Set env vars `ONMETA_BASE_URL` (e.g. `https://api.onmeta.in`) and `ONMETA_API_KEY` in Cloud Run when ready.
+
+---
+
 ## 1. Deploy the backend to Cloud Run
 
 You can connect your GitHub repo to Cloud Run and deploy from the **backend** folder (Dockerfile is there).
@@ -13,7 +22,7 @@ You can connect your GitHub repo to Cloud Run and deploy from the **backend** fo
    gcloud config set project YOUR_PROJECT_ID
    ```
 
-2. **Build and deploy** (from repo root):
+2. **Build and deploy** (from repo root; run from your machine where `gcloud auth login` was done):
    ```bash
    cd stellar-hackthon/backend
    gcloud run deploy walletsurance \
@@ -22,7 +31,8 @@ You can connect your GitHub repo to Cloud Run and deploy from the **backend** fo
      --allow-unauthenticated \
      --set-env-vars "CONTRACT_ID=CCOZSAWX2SEGGGXVRP2ZQFR7Y5GZIV64VBLJFUH2PHY4HG7KQDVOENMJ,SOROBAN_RPC_URL=https://soroban-testnet.stellar.org"
    ```
-   Replace `YOUR_PROJECT_ID` and the region if needed. You’ll get a URL like `https://walletsurance-xxxxx.run.app`.
+   For **real Onmeta** later, add: `ONMETA_BASE_URL=https://api.onmeta.in,ONMETA_API_KEY=your_key`
+   Replace project/region if needed. You’ll get a URL like `https://walletsurance-xxxxx.run.app`.
 
 3. **Optional env vars** (in Cloud Run → Edit & deploy new revision → Variables):
    - `CONTRACT_ID` – your deployed contract ID

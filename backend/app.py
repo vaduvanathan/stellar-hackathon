@@ -215,13 +215,24 @@ def agent_check():
     beneficiary_address = (status.get("beneficiary_address") or "").strip()
     db = get_db()
     bank_info = None
+    onmeta_order = None
     if beneficiary_address:
         row = db.execute(
-            "SELECT stellar_address, bank_account_holder, bank_name FROM beneficiaries WHERE stellar_address = ?",
+            "SELECT stellar_address, bank_account_holder, bank_name, bank_account_number, bank_ifsc FROM beneficiaries WHERE stellar_address = ?",
             (beneficiary_address,),
         ).fetchone()
         if row:
             bank_info = dict(row)
+            try:
+                from onmeta_client import create_offramp_order
+                onmeta_order = create_offramp_order(
+                    fiat_amount=0.0,
+                    account_number=row["bank_account_number"] or "MOCK_ACC",
+                    account_name=row["bank_account_holder"] or "Beneficiary",
+                    ifsc=row["bank_ifsc"] or "MOCK0001",
+                )
+            except Exception:
+                onmeta_order = {"status": "mock_error"}
 
     try:
         db.execute(
@@ -242,6 +253,7 @@ def agent_check():
         "bank_info_stored": bank_info is not None,
         "claim_mock": "success",
         "offramp_mock": "Onmeta Off-Ramp API mocked – fiat wire simulated",
+        "onmeta_order": onmeta_order,
     }), 200
 
 
@@ -288,6 +300,33 @@ def agent_run():
             "offramp_mock": "Onmeta Off-Ramp API mocked – fiat wire simulated",
         }
     )
+
+
+@app.route("/api/mock-onmeta/create-order", methods=["POST"])
+def mock_onmeta_create_order():
+    """
+    Mock Onmeta Off-Ramp create order. Same request body as Onmeta API
+    (https://documenter.getpostman.com/view/20857383/UzXNTwpM).
+    Use for testing; set ONMETA_BASE_URL + ONMETA_API_KEY for real.
+    """
+    data = request.get_json() or {}
+    bank = data.get("bankDetails") or {}
+    try:
+        from onmeta_client import create_offramp_order
+        order = create_offramp_order(
+            sell_token_symbol=data.get("sellTokenSymbol", "XLM"),
+            chain_id=int(data.get("chainId", 1)),
+            fiat_currency=(data.get("fiatCurrency") or "inr").lower(),
+            fiat_amount=float(data.get("fiatAmount", 0)),
+            payment_mode=data.get("paymentMode", "INR_IMPS"),
+            account_number=bank.get("accountNumber", "MOCK"),
+            account_name=bank.get("accountName", "Mock Holder"),
+            ifsc=bank.get("ifsc", "MOCK0001"),
+            metadata=data.get("metaData"),
+        )
+        return jsonify(order), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 @app.route("/api/agent/runs", methods=["GET"])
