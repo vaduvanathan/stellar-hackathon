@@ -120,7 +120,7 @@
       <h2>Lock funds</h2>
       <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">Connect your <strong>Stellar</strong> wallet (Freighter only). You must <strong>ping</strong> before the inactivity period ends to keep the funds.</p>
       <p style="margin: 0 0 0.75rem 0; font-size: 0.8rem; color: var(--warn);"><strong>Use Testnet:</strong> Open the Freighter extension → switch the network dropdown to <strong>Testnet</strong> (not Mainnet). Then come back and click Connect wallet.</p>
-      <p style="margin: 0 0 0.75rem 0; font-size: 0.75rem; color: var(--muted);">Ignore any &quot;MetaMask&quot; error in the console — this app uses Freighter (Stellar), not MetaMask. When you click Connect, <strong>approve the Freighter popup</strong> to allow this site.</p>
+      <p style="margin: 0 0 0.75rem 0; font-size: 0.75rem; color: var(--muted);">Ignore &quot;MetaMask&quot; and &quot;SES Removing…&quot; in the console. When you click Connect: <strong>allow popups</strong> for this site, look for the <strong>Freighter window</strong> (tab or popup), and click <strong>Allow</strong>. If you see &quot;No address returned&quot;, the popup was blocked or you didn’t approve — allow popups and try again.</p>
       <div style="margin-bottom: 1rem;">
         <button type="button" id="connect-wallet-btn" class="secondary">Connect wallet</button>
         <span id="connected-address" class="mono" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--muted);"></span>
@@ -300,12 +300,14 @@
         addrEl.style.color = 'var(--err)';
         return;
       }
+      addrEl.textContent = 'Opening Freighter… Check for a popup (allow it if blocked).';
+      addrEl.style.color = 'var(--muted)';
       try {
         const out = await (api.requestAccess ? api.requestAccess() : api.getPublicKey ? api.getPublicKey() : api.getAddress());
         const key = (typeof out === 'string') ? out : (out && (out.publicKey || out.address));
         if (!key) {
-          const errMsg = (out && out.error) ? out.error : (!out ? 'Freighter did not respond. Approve the connection in the extension popup.' : 'No address returned. Try approving the site in Freighter.');
-          throw new Error(errMsg);
+          const errMsg = (out && out.error) ? out.error : (!out ? 'Freighter did not respond.' : 'No address returned.');
+          throw new Error(errMsg + ' Allow this site in Freighter and unblock popups, then try again.');
         }
         connectedPublicKey = key;
         btn.textContent = 'Disconnect';
