@@ -38,7 +38,7 @@ except ImportError:
 
 from flask import Flask, g, jsonify, request, render_template
 
-from config import CONTRACT_ID, DEFAULT_TOKEN_ADDRESS, NETWORK_PASSPHRASE, SOROBAN_RPC_URL
+from config import CONTRACT_ID, DEFAULT_TOKEN_ADDRESS, HORIZON_URL, NETWORK_PASSPHRASE, SOROBAN_RPC_URL
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config["DATABASE"] = os.environ.get("DATABASE_PATH", "walletsurance.db")
@@ -171,6 +171,7 @@ def lock_config():
         "contract_id": CONTRACT_ID,
         "rpc_url": SOROBAN_RPC_URL,
         "network_passphrase": NETWORK_PASSPHRASE,
+        "horizon_url": HORIZON_URL or "https://horizon-testnet.stellar.org",
         "default_token_address": DEFAULT_TOKEN_ADDRESS or None,
     })
 

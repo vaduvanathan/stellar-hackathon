@@ -97,6 +97,7 @@
     footer { margin-top: 2rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
     footer a { color: var(--accent); text-decoration: none; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/stellar-sdk@11.2.0/dist/stellar-sdk.min.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@stellar/freighter-api@2.0.0/build/index.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -213,46 +214,46 @@
       msgEl.textContent = 'Building transaction…';
       msgEl.className = 'msg loading';
       try {
-        const buildRes = await fetch('/api/build-add-signer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            account_public_key: accountPublicKey,
-            signer_public_key: signerPublicKey,
-          }),
-        });
-        const buildData = await buildRes.json().catch(() => ({}));
-        if (!buildRes.ok) {
-          const where = buildData.where ? ` [${buildData.where}]` : '';
-          msgEl.textContent = (buildData.error || (buildRes.status === 500 ? 'Server error (500).' : 'Build failed')) + where;
-          if (buildData.traceback) {
-            console.error('Build failed traceback:', buildData.traceback);
-          }
+        const StellarSdk = window.StellarSdk;
+        if (!StellarSdk || !StellarSdk.Server) {
+          msgEl.textContent = 'Stellar SDK not loaded. Refresh the page.';
           msgEl.className = 'msg err';
           return;
         }
-        const txXdr = buildData.transaction_xdr;
-        if (!txXdr) {
-          msgEl.textContent = 'No transaction returned';
-          msgEl.className = 'msg err';
-          return;
-        }
-        msgEl.textContent = 'Open Freighter to sign…';
         let networkPassphrase = 'Test SDF Network ; September 2015';
+        let horizonUrl = 'https://horizon-testnet.stellar.org';
         try {
           const cfgRes = await fetch('/api/lock-config');
           if (cfgRes.ok) {
             const cfg = await cfgRes.json();
             if (cfg.network_passphrase) networkPassphrase = cfg.network_passphrase;
+            if (cfg.horizon_url) horizonUrl = cfg.horizon_url.replace(/\/$/, '');
           }
         } catch (_) {}
+        var server = new StellarSdk.Server(horizonUrl);
+        var sourceAccount = await server.loadAccount(accountPublicKey);
+        var fee = (typeof StellarSdk.BASE_FEE !== 'undefined') ? StellarSdk.BASE_FEE : 100;
+        var builder = new StellarSdk.TransactionBuilder(sourceAccount, {
+          fee: String(fee),
+          networkPassphrase: networkPassphrase,
+        });
+        builder.addOperation(StellarSdk.Operation.setOptions({
+          signer: {
+            ed25519PublicKey: signerPublicKey,
+            weight: 1,
+          },
+        }));
+        var tx = builder.setTimeout(180).build();
+        var txXdr = tx.toEnvelope().toXDR('base64');
+        msgEl.textContent = 'Open Freighter to sign…';
+        msgEl.className = 'msg loading';
         const freighterApi = window.freighterApi || window.freighter;
         if (!freighterApi || !freighterApi.signTransaction) {
           msgEl.textContent = 'Freighter extension not found. Use Option B (Stellar Laboratory) instead.';
           msgEl.className = 'msg err';
           return;
         }
-        const signed = await freighterApi.signTransaction(txXdr, { networkPassphrase });
+        const signed = await freighterApi.signTransaction(txXdr, { networkPassphrase: networkPassphrase });
         const signedXdr = signed && (signed.signedTransaction || signed.signedEnvelope || signed);
         if (!signedXdr) {
           msgEl.textContent = 'Signing cancelled or failed.';
@@ -274,7 +275,7 @@
           msgEl.className = 'msg err';
         }
       } catch (e) {
-        msgEl.textContent = e.message || 'Error';
+        msgEl.textContent = (e.message || e) + (e.response ? ' (check account exists on this network)' : '');
         msgEl.className = 'msg err';
       }
     });
