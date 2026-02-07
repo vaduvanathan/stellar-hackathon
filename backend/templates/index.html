@@ -133,10 +133,6 @@
       filter: drop-shadow(0 0 30px rgba(34,211,238,0.35)) drop-shadow(0 0 60px rgba(129,140,248,0.2));
     }
 
-    .hero-sub {
-      font-size: 0.85rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
-      color: var(--accent); margin-bottom: 1rem;
-    }
     .hero h1 {
       font-size: clamp(2.5rem, 6vw, 4rem);
       font-weight: 900; letter-spacing: -0.03em; line-height: 1.1;
@@ -273,8 +269,6 @@
     }
     .site-footer a { color: var(--accent); text-decoration: none; }
     .site-footer a:hover { text-decoration: underline; }
-    .contract-line { margin-top: 0.75rem; font-size: 0.8rem; }
-    .contract-line code { font-size: 0.75em; }
 
     /* ---- Responsive ---- */
     @media (max-width: 600px) {
@@ -310,25 +304,14 @@
     <div class="logo-scene" aria-hidden="true">
       <div class="logo-cube">
         <div class="logo-face">
-          <!-- Stellar "S" logo — black on transparent -->
-          <svg viewBox="0 0 230 230" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#0a0a0a"/>
-                <stop offset="100%" stop-color="#1a1a2e"/>
-              </linearGradient>
-            </defs>
-            <circle cx="115" cy="115" r="105" fill="url(#sg)"/>
-            <!-- Two horizontal bars — the Stellar brand mark -->
-            <rect x="45" y="78" width="140" height="16" rx="8" fill="#22d3ee"/>
-            <rect x="45" y="136" width="140" height="16" rx="8" fill="#818cf8"/>
-            <!-- Diagonal connecting stripe -->
-            <rect x="95" y="60" width="16" height="110" rx="8" fill="#e8edf5" transform="rotate(-25 115 115)"/>
+          <!-- Official Stellar XLM logo (black) from cryptologos.cc -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 236.36 200">
+            <path fill="#0a0a0a" d="M203,26.16l-28.46,14.5-137.43,70a82.49,82.49,0,0,1-.7-10.69A81.87,81.87,0,0,1,158.2,28.6l16.29-8.3,2.43-1.24A100,100,0,0,0,18.18,100q0,3.82.29,7.61a18.19,18.19,0,0,1-9.88,17.58L0,129.57V150l25.29-12.89,0,0,8.19-4.18,8.07-4.11v0L186.43,55l16.28-8.29,33.65-17.15V9.14Z"/>
+            <path fill="#0a0a0a" d="M236.36,50,49.78,145,33.5,153.31,0,170.38v20.41l33.27-16.95,28.46-14.5L199.3,89.24A83.45,83.45,0,0,1,200,100,81.87,81.87,0,0,1,78.09,171.36l-1,.53-17.66,9A100,100,0,0,0,218.18,100c0-2.57-.1-5.14-.29-7.68a18.2,18.2,0,0,1,9.87-17.58l8.6-4.38Z"/>
           </svg>
         </div>
       </div>
     </div>
-    <div class="hero-sub">Stellar Build-A-Thon Chennai</div>
     <h1>Walletsurance</h1>
     <p class="hero-tagline">When you're inactive, your nominee gets an SMS and can claim your entire Stellar wallet. Funds never leave your account until they're needed.</p>
     <a href="/nominee" class="hero-cta">
@@ -371,8 +354,8 @@
 
   <!-- Footer -->
   <footer class="site-footer">
-    <p>Stellar Build-A-Thon Chennai · <a href="https://github.com/vaduvanathan/stellar-hackathon">GitHub</a></p>
-    <p id="contract-address-line" class="contract-line" style="display: none;">Soroban contract: <code id="contract-address"></code></p>
+    <p style="font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem;">Stellar Build-A-Thon Chennai</p>
+    <p><a href="https://github.com/vaduvanathan/stellar-hackathon">GitHub</a></p>
   </footer>
 
   <script>
@@ -398,17 +381,6 @@
       }
     });
 
-    (async function showContractIfSet() {
-      try {
-        const r = await fetch('/api/lock-config');
-        const d = await r.json().catch(() => ({}));
-        const id = (d && d.contract_id) ? d.contract_id.trim() : '';
-        if (id) {
-          document.getElementById('contract-address').textContent = id;
-          document.getElementById('contract-address-line').style.display = 'block';
-        }
-      } catch (_) {}
-    })();
   </script>
 </body>
 </html>
