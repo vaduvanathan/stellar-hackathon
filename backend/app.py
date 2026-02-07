@@ -411,9 +411,8 @@ def build_add_signer():
     Returns transaction_xdr for the user to sign with their wallet (e.g. Freighter) and submit via /api/claim/submit.
     """
     try:
-        from config import NETWORK_PASSPHRASE
-        from horizon_client import get_account
-        from stellar_sdk import Account, Signer, TransactionBuilder
+        from config import HORIZON_URL, NETWORK_PASSPHRASE
+        from stellar_sdk import Server, Signer, TransactionBuilder
         from stellar_sdk.transaction_envelope import TransactionEnvelope
     except ImportError as e:
         return jsonify({"error": f"Missing dependency: {e}"}), 503
@@ -428,16 +427,13 @@ def build_add_signer():
     if len(signer_public_key) != 56 or not signer_public_key.startswith("G"):
         return jsonify({"error": "signer_public_key must be a Stellar public key (G..., 56 chars)"}), 400
 
-    acc = get_account(account_public_key)
-    if not acc:
-        return jsonify({"error": "Account not found on network"}), 404
     try:
-        sequence = int(acc["sequence"])
-    except (TypeError, ValueError):
-        return jsonify({"error": "Invalid account sequence"}), 500
+        server = Server(HORIZON_URL)
+        source = server.load_account(account_public_key)
+    except Exception as e:
+        return jsonify({"error": f"Account not found or load failed: {e}"}), 404
 
     try:
-        source = Account(account_public_key, sequence)
         secondary_signer = Signer.ed25519_public_key(signer_public_key, 1)
         tx = (
             TransactionBuilder(
