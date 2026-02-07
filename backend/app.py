@@ -437,8 +437,8 @@ def build_add_signer():
         return jsonify({"error": "Invalid account sequence"}), 500
 
     try:
-        source = Account(account_id=account_public_key, sequence=sequence)
-        secondary_signer = Signer.ed25519_public_key(account_id=signer_public_key, weight=1)
+        source = Account(account_public_key, sequence)
+        secondary_signer = Signer.ed25519_public_key(signer_public_key, 1)
         tx = (
             TransactionBuilder(
                 source_account=source,
