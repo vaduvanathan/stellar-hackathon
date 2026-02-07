@@ -3,11 +3,17 @@ Walletsurance Backend – Flask API and Agent entrypoint.
 - REST API for user registration (mock bank details), ping, and status.
 - Agent: checks contracts for claimable vaults, mocks claim + Onmeta off-ramp.
 """
+import logging
 import os
 import secrets
 import sqlite3
 import sys
+import traceback
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
+if not logging.root.handlers:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
 
 # Ensure backend directory is on path (for key_encrypt, horizon_client, etc.) when run from project root or Cloud Run
 _backend_dir = Path(__file__).resolve().parent
@@ -36,6 +42,22 @@ from config import CONTRACT_ID, DEFAULT_TOKEN_ADDRESS, NETWORK_PASSPHRASE, SOROB
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config["DATABASE"] = os.environ.get("DATABASE_PATH", "walletsurance.db")
+
+# When set, 500 responses include "traceback" in JSON (for debugging). Always log full traceback server-side.
+SHOW_TRACEBACK_IN_RESPONSE = os.environ.get("FLASK_DEBUG", "0") == "1" or os.environ.get("ERROR_DETAIL", "0") == "1"
+
+
+@app.errorhandler(500)
+def handle_500(err):
+    """Ensure every 500 returns JSON and we log the exact failure location."""
+    tb = "".join(traceback.format_exception(type(err), err, getattr(err, "__traceback__", None)))
+    if not tb:
+        tb = traceback.format_exc()
+    logger.error("500 Internal Server Error: %s\n%s", err, tb)
+    payload = {"error": str(err), "ok": False}
+    if SHOW_TRACEBACK_IN_RESPONSE:
+        payload["traceback"] = tb
+    return jsonify(payload), 500
 
 
 def get_db():
@@ -249,12 +271,14 @@ def nominee_register():
         secret = kp.secret
         public = kp.public_key
     except Exception as e:
-        return jsonify({"error": f"Keypair generation failed: {e}"}), 500
+        logger.exception("nominee_register: Keypair generation failed")
+        return jsonify({"error": f"Keypair generation failed: {e}", "where": "keypair"}), 500
 
     try:
         ciphertext_b64, nonce_b64, salt_b64 = encrypt_secret_with_answer(secret, answer)
     except Exception as e:
-        return jsonify({"error": f"Encryption failed: {e}"}), 500
+        logger.exception("nominee_register: Encryption failed")
+        return jsonify({"error": f"Encryption failed: {e}", "where": "encrypt"}), 500
 
     db = get_db()
     try:
@@ -270,7 +294,8 @@ def nominee_register():
     except sqlite3.IntegrityError:
         return jsonify({"error": "Registration failed (duplicate depositor?)"}), 400
     except sqlite3.Error as e:
-        return jsonify({"error": f"Database error: {e}"}), 500
+        logger.exception("nominee_register: Database error")
+        return jsonify({"error": f"Database error: {e}", "where": "database"}), 500
 
     return jsonify({
         "message": "Nominee registered. You must add the sweep key as a co-signer to your account.",
@@ -431,7 +456,11 @@ def build_add_signer():
         server = Server(HORIZON_URL)
         source = server.load_account(account_public_key)
     except Exception as e:
-        return jsonify({"error": f"Account not found or load failed: {e}"}), 404
+        logger.exception("build_add_signer: load_account failed for %s", account_public_key[:8])
+        payload = {"error": f"Account not found or load failed: {e}", "where": "load_account"}
+        if SHOW_TRACEBACK_IN_RESPONSE:
+            payload["traceback"] = traceback.format_exc()
+        return jsonify(payload), 404
 
     try:
         secondary_signer = Signer.ed25519_public_key(signer_public_key, 1)
@@ -449,7 +478,11 @@ def build_add_signer():
         xdr_b64 = _envelope_to_xdr_base64(envelope)
         return jsonify({"transaction_xdr": xdr_b64})
     except Exception as e:
-        return jsonify({"error": f"Build failed: {e}"}), 500
+        logger.exception("build_add_signer: build/serialize failed")
+        payload = {"error": f"Build failed: {e}", "where": "build_or_serialize"}
+        if SHOW_TRACEBACK_IN_RESPONSE:
+            payload["traceback"] = traceback.format_exc()
+        return jsonify(payload), 500
 
 
 @app.route("/api/contract/status", methods=["GET"])

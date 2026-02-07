@@ -223,7 +223,11 @@
         });
         const buildData = await buildRes.json().catch(() => ({}));
         if (!buildRes.ok) {
-          msgEl.textContent = buildData.error || (buildRes.status === 500 ? 'Server error (500). Try Option B (Stellar Laboratory) to add the signer.' : 'Build failed');
+          const where = buildData.where ? ` [${buildData.where}]` : '';
+          msgEl.textContent = (buildData.error || (buildRes.status === 500 ? 'Server error (500).' : 'Build failed')) + where;
+          if (buildData.traceback) {
+            console.error('Build failed traceback:', buildData.traceback);
+          }
           msgEl.className = 'msg err';
           return;
         }
