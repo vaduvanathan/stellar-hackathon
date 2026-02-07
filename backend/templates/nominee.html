@@ -98,6 +98,10 @@
     footer a { color: var(--accent); text-decoration: none; }
   </style>
   <script src="https://unpkg.com/@stellar/freighter-api@2.0.0/build/index.min.js" crossorigin="anonymous"></script>
+  <!-- Cache-bust so redeploys get latest -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 </head>
 <body>
   <div class="wrap">
@@ -144,8 +148,10 @@
       </div>
       <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text);"><strong>Add this key as a signer</strong></p>
       <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--muted);">Use <strong>Set Options</strong>: signer = the key above, weight = 1. You can build the transaction in Stellar Lab or sign it here with Freighter.</p>
-      <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--warn);">If Freighter says &quot;not connected&quot;, click <strong>Allow</strong> or <strong>Connect</strong> first, then try &quot;Build &amp; sign here&quot; again.</p>
-      <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+      <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--warn);">Click <strong>Connect wallet</strong> first so Freighter shows &quot;Confirm&quot; when you sign. Then click <strong>Build &amp; sign here</strong>.</p>
+      <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+        <button type="button" id="connect-wallet-btn" class="primary" style="background: var(--accent-dim); color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Connect wallet (Freighter)</button>
+        <span id="connect-status" style="font-size: 0.9rem; color: var(--muted);"></span>
         <a id="open-lab-btn" href="https://lab.stellar.org/transaction/build" target="_blank" rel="noopener" class="secondary" style="display: inline-block; background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; text-decoration: none; font-size: 0.95rem; font-weight: 600;">Open Stellar Lab → Build transaction</a>
         <button type="button" id="add-signer-btn" class="secondary" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Build & sign here (Freighter)</button>
       </div>
@@ -158,6 +164,61 @@
   </div>
 
   <script>
+    // UMD may expose API on .default (e.g. @stellar/freighter-api 2.x)
+    function getFreighterApi() {
+      var w = window.freighterApi || window.freighter;
+      if (!w) return null;
+      if (w.default && typeof w.default.signTransaction === 'function') return w.default;
+      return w;
+    }
+
+    document.getElementById('connect-wallet-btn').addEventListener('click', async function () {
+      var statusEl = document.getElementById('connect-status');
+      statusEl.textContent = 'Opening Freighter…';
+      statusEl.style.color = 'var(--muted)';
+      try {
+        var api = getFreighterApi();
+        if (!api || typeof api.requestAccess !== 'function') {
+          if (!api || typeof api.signTransaction !== 'function') {
+            statusEl.textContent = 'Freighter not found. Install the extension and refresh.';
+            statusEl.style.color = 'var(--err)';
+            return;
+          }
+          if (typeof api.setAllowed === 'function') {
+            var setRes = await api.setAllowed().catch(function (e) { return { isAllowed: false, error: e }; });
+            if (setRes && setRes.isAllowed) {
+              statusEl.textContent = 'Connected. Now click "Build & sign here".';
+              statusEl.style.color = 'var(--accent)';
+              return;
+            }
+          }
+          statusEl.textContent = 'No requestAccess/setAllowed. Click "Build & sign here" and allow in Freighter if asked.';
+          statusEl.style.color = 'var(--warn)';
+          return;
+        }
+        var res = await api.requestAccess().catch(function (e) { return { error: e }; });
+        if (res && res.address) {
+          statusEl.textContent = 'Connected: ' + res.address.slice(0, 8) + '… Now click "Build & sign here".';
+          statusEl.style.color = 'var(--accent)';
+        } else if (typeof api.setAllowed === 'function') {
+          var setRes = await api.setAllowed().catch(function (e) { return { isAllowed: false }; });
+          if (setRes && setRes.isAllowed) {
+            statusEl.textContent = 'Connected. Now click "Build & sign here".';
+            statusEl.style.color = 'var(--accent)';
+          } else {
+            statusEl.textContent = 'Connection cancelled or denied. Allow this site in Freighter and try again.';
+            statusEl.style.color = 'var(--err)';
+          }
+        } else {
+          statusEl.textContent = 'Connection cancelled or denied. Allow this site in Freighter and try again.';
+          statusEl.style.color = 'var(--err)';
+        }
+      } catch (e) {
+        statusEl.textContent = (e && e.message) || 'Connection failed';
+        statusEl.style.color = 'var(--err)';
+      }
+    });
+
     document.getElementById('nominee-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msgEl = document.getElementById('nominee-msg');
@@ -247,23 +308,23 @@
             if (cfg.network_passphrase) networkPassphrase = cfg.network_passphrase;
           }
         } catch (_) {}
-        var freighterApi = window.freighterApi || window.freighter;
-        if (!freighterApi || !freighterApi.signTransaction) {
+        var freighterApi = getFreighterApi();
+        if (!freighterApi || typeof freighterApi.signTransaction !== 'function') {
           msgEl.textContent = 'Freighter extension not found. Use "Open Stellar Lab" to build and sign there.';
           msgEl.className = 'msg err';
           return;
         }
-        msgEl.textContent = 'Connect Freighter (allow this site if asked)…';
+        msgEl.textContent = 'Connecting to Freighter (allow this site if a popup appears)…';
         var allowed = false;
         if (typeof freighterApi.requestAccess === 'function') {
           var accessRes = await freighterApi.requestAccess().catch(function () { return {}; });
-          allowed = !accessRes.error && accessRes.address;
+          allowed = !accessRes.error && !!accessRes.address;
         }
         if (!allowed && typeof freighterApi.setAllowed === 'function') {
           var setRes = await freighterApi.setAllowed().catch(function () { return {}; });
-          allowed = setRes && setRes.isAllowed;
+          allowed = !!(setRes && setRes.isAllowed);
         }
-        msgEl.textContent = 'Open Freighter to sign (click Confirm)…';
+        msgEl.textContent = 'Open Freighter and click Confirm to sign…';
         var signed = await freighterApi.signTransaction(txXdr, { networkPassphrase: networkPassphrase });
         var signedXdr = signed && (signed.signedTransaction || signed.signedEnvelope || signed.signedTxXdr || signed);
         if (!signedXdr) {
