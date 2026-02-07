@@ -475,6 +475,9 @@ def build_add_signer():
             .build()
         )
         envelope = TransactionEnvelope(transaction=tx, network_passphrase=NETWORK_PASSPHRASE)
+        # SDK 12+: to_xdr_object() expects transaction.v1; convert to v1 envelope if needed
+        if hasattr(envelope, "to_transaction_envelope_v1"):
+            envelope = envelope.to_transaction_envelope_v1()
         xdr_b64 = _envelope_to_xdr_base64(envelope)
         return jsonify({"transaction_xdr": xdr_b64})
     except Exception as e:
