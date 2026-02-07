@@ -1,0 +1,219 @@
+"""
+Walletsurance Backend – Flask API and Agent entrypoint.
+- REST API for user registration (mock bank details), ping, and status.
+- Agent: checks contracts for claimable vaults, mocks claim + Onmeta off-ramp.
+"""
+import os
+import sqlite3
+from pathlib import Path
+
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+app.config["DATABASE"] = os.environ.get("DATABASE_PATH", "walletsurance.db")
+
+
+def get_db():
+    db = getattr(app, "_database", None)
+    if db is None:
+        db_path = app.config["DATABASE"]
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        app._database = sqlite3.connect(db_path)
+        app._database.row_factory = sqlite3.Row
+    return app._database
+
+
+def init_db():
+    with app.app_context():
+        db = get_db()
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS beneficiaries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                stellar_address TEXT NOT NULL UNIQUE,
+                contract_id TEXT,
+                bank_account_holder TEXT,
+                bank_account_number TEXT,
+                bank_ifsc TEXT,
+                bank_name TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS agent_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                contract_id TEXT,
+                beneficiary_address TEXT,
+                amount_mocked TEXT,
+                offramp_mock_status TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        db.commit()
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok", "service": "walletsurance"})
+
+
+@app.route("/api/contract/status", methods=["GET"])
+def contract_status():
+    """
+    Read contract state from chain (can_claim, beneficiary).
+    Requires CONTRACT_ID and SOROBAN_RPC_URL. Returns 503 if not configured or RPC fails.
+    """
+    try:
+        from soroban_client import get_contract_status, get_network_info
+    except ImportError:
+        return jsonify({"error": "Soroban client not available"}), 503
+
+    status = get_contract_status()
+    if status is None:
+        info = get_network_info()
+        return (
+            jsonify(
+                {
+                    "error": "Contract status unavailable",
+                    "hint": "Set CONTRACT_ID and SOROBAN_RPC_URL (e.g. Testnet)",
+                    **info,
+                }
+            ),
+            503,
+        )
+    return jsonify(status)
+
+
+@app.route("/api/beneficiary", methods=["POST"])
+def register_beneficiary():
+    """Register or update mock bank details for a Stellar address (beneficiary)."""
+    data = request.get_json() or {}
+    stellar_address = (data.get("stellar_address") or "").strip()
+    contract_id = (data.get("contract_id") or "").strip()
+    bank_account_holder = (data.get("bank_account_holder") or "").strip()
+    bank_account_number = (data.get("bank_account_number") or "").strip()
+    bank_ifsc = (data.get("bank_ifsc") or "").strip()
+    bank_name = (data.get("bank_name") or "").strip()
+
+    if not stellar_address:
+        return jsonify({"error": "stellar_address required"}), 400
+
+    db = get_db()
+    try:
+        db.execute(
+            """
+            INSERT INTO beneficiaries (
+                stellar_address, contract_id, bank_account_holder,
+                bank_account_number, bank_ifsc, bank_name
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(stellar_address) DO UPDATE SET
+                contract_id=excluded.contract_id,
+                bank_account_holder=excluded.bank_account_holder,
+                bank_account_number=excluded.bank_account_number,
+                bank_ifsc=excluded.bank_ifsc,
+                bank_name=excluded.bank_name
+            """,
+            (
+                stellar_address,
+                contract_id or None,
+                bank_account_holder or None,
+                bank_account_number or None,
+                bank_ifsc or None,
+                bank_name or None,
+            ),
+        )
+        db.commit()
+    except sqlite3.Error as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify(
+        {
+            "stellar_address": stellar_address,
+            "contract_id": contract_id or None,
+            "message": "Beneficiary registered (mock bank details stored)",
+        }
+    )
+
+
+@app.route("/api/beneficiary/<stellar_address>", methods=["GET"])
+def get_beneficiary(stellar_address):
+    """Get mock bank details for a beneficiary (masked)."""
+    db = get_db()
+    row = db.execute(
+        "SELECT stellar_address, contract_id, bank_account_holder, bank_name FROM beneficiaries WHERE stellar_address = ?",
+        (stellar_address.strip(),),
+    ).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify(
+        {
+            "stellar_address": row["stellar_address"],
+            "contract_id": row["contract_id"],
+            "bank_account_holder": row["bank_account_holder"],
+            "bank_name": row["bank_name"],
+        }
+    )
+
+
+@app.route("/api/agent/run", methods=["POST"])
+def agent_run():
+    """
+    Mock agent run: check claimable vaults, mock claim and mock Onmeta off-ramp.
+    In production this would:
+    - Query Soroban for contracts where can_claim() is true
+    - Submit claim() as the agent
+    - Call Onmeta Off-Ramp API (here: mocked)
+    """
+    # Mock: simulate one claim and one off-ramp
+    db = get_db()
+    contract_id = (request.get_json() or {}).get("contract_id", "").strip()
+    beneficiary_address = (request.get_json() or {}).get("beneficiary_address", "").strip()
+    amount_mocked = (request.get_json() or {}).get("amount_mocked", "0")
+
+    if not contract_id and not beneficiary_address:
+        return jsonify(
+            {
+                "message": "Agent run (mocked). No contract_id/beneficiary provided; simulating success.",
+                "claim_mock": "skipped",
+                "offramp_mock": "skipped",
+            }
+        )
+
+    try:
+        db.execute(
+            """
+            INSERT INTO agent_runs (contract_id, beneficiary_address, amount_mocked, offramp_mock_status)
+            VALUES (?, ?, ?, ?)
+            """,
+            (contract_id or None, beneficiary_address or None, amount_mocked, "mocked_success"),
+        )
+        db.commit()
+    except sqlite3.Error:
+        pass
+
+    return jsonify(
+        {
+            "message": "Agent run completed (mocked)",
+            "claim_mock": "success",
+            "offramp_mock": "Onmeta Off-Ramp API mocked – fiat wire simulated",
+        }
+    )
+
+
+@app.route("/api/agent/runs", methods=["GET"])
+def agent_runs_list():
+    """List recent mock agent runs."""
+    db = get_db()
+    rows = db.execute(
+        "SELECT contract_id, beneficiary_address, amount_mocked, offramp_mock_status, created_at FROM agent_runs ORDER BY id DESC LIMIT 20"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+if __name__ == "__main__":
+    init_db()
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=os.environ.get("FLASK_DEBUG", "0") == "1")

@@ -1,0 +1,11 @@
+# Local env with secrets (never commit)
+.env
+backend/.env
+
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# SQLite (local dev)
+backend/*.db
