@@ -414,10 +414,20 @@ def claim_offramp():
 
 
 def _envelope_to_xdr_base64(envelope):
-    """Get base64 XDR string from TransactionEnvelope (works across stellar_sdk versions)."""
-    if hasattr(envelope, "to_xdr") and callable(getattr(envelope, "to_xdr")):
-        return envelope.to_xdr()
+    """Get base64 XDR string from TransactionEnvelope (works across stellar_sdk 11/12/13)."""
     import base64
+
+    # 1) Prefer SDK's own to_xdr() when available (e.g. on BaseTransactionEnvelope)
+    to_xdr = getattr(envelope, "to_xdr", None)
+    if callable(to_xdr):
+        try:
+            out = to_xdr()
+            if isinstance(out, str) and len(out) > 0:
+                return out
+        except Exception:
+            pass
+
+    # 2) Manual: to_xdr_object() then pack. Packer API differs (xdrlib3 vs xdrlib).
     xdr_obj = envelope.to_xdr_object()
     try:
         from xdrlib3 import Packer
@@ -425,7 +435,13 @@ def _envelope_to_xdr_base64(envelope):
         from xdrlib import Packer
     p = Packer()
     xdr_obj.pack(p)
-    return base64.b64encode(p.get_buffer()).decode("ascii")
+    if hasattr(p, "get_buffer"):
+        raw = p.get_buffer()
+    elif hasattr(p, "getvalue"):
+        raw = p.getvalue()
+    else:
+        raise ValueError("Packer has no get_buffer or getvalue")
+    return base64.b64encode(raw).decode("ascii")
 
 
 @app.route("/api/build-add-signer", methods=["POST"])
@@ -453,7 +469,7 @@ def build_add_signer():
         return jsonify({"error": "signer_public_key must be a Stellar public key (G..., 56 chars)"}), 400
 
     try:
-        server = Server(HORIZON_URL)
+        server = Server(horizon_url=HORIZON_URL)
         source = server.load_account(account_public_key)
     except Exception as e:
         logger.exception("build_add_signer: load_account failed for %s", account_public_key[:8])
@@ -474,8 +490,10 @@ def build_add_signer():
             .set_timeout(180)
             .build()
         )
+        # Ensure transaction is v1 so to_xdr_object() works (SDK 11/12/13 use transaction.v1)
+        if hasattr(tx, "v1"):
+            tx.v1 = True
         envelope = TransactionEnvelope(transaction=tx, network_passphrase=NETWORK_PASSPHRASE)
-        # SDK 12+: to_xdr_object() expects transaction.v1; convert to v1 envelope if needed
         if hasattr(envelope, "to_transaction_envelope_v1"):
             envelope = envelope.to_transaction_envelope_v1()
         xdr_b64 = _envelope_to_xdr_base64(envelope)
