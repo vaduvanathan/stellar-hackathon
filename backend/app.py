@@ -9,6 +9,8 @@ from pathlib import Path
 
 from flask import Flask, g, jsonify, request, render_template
 
+from config import CONTRACT_ID, DEFAULT_TOKEN_ADDRESS, NETWORK_PASSPHRASE, SOROBAN_RPC_URL
+
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config["DATABASE"] = os.environ.get("DATABASE_PATH", "walletsurance.db")
 
@@ -79,6 +81,75 @@ def index():
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "walletsurance"})
+
+
+@app.route("/api/lock-config", methods=["GET"])
+def lock_config():
+    """Public config for Lock funds: contract ID, RPC URL, network, default token (if set)."""
+    return jsonify({
+        "contract_id": CONTRACT_ID,
+        "rpc_url": SOROBAN_RPC_URL,
+        "network_passphrase": NETWORK_PASSPHRASE,
+        "default_token_address": DEFAULT_TOKEN_ADDRESS or None,
+    })
+
+
+@app.route("/api/build-deposit", methods=["POST"])
+def build_deposit():
+    """
+    Build an unsigned deposit() transaction. Returns transaction_xdr for the client to sign (e.g. Freighter).
+    Body: depositor_public_key, beneficiary_address, amount, timeout_ledgers, token_address (optional).
+    """
+    try:
+        from build_deposit import build_deposit_xdr
+    except ImportError:
+        return jsonify({"error": "build_deposit not available"}), 503
+
+    data = request.get_json() or {}
+    depositor = (data.get("depositor_public_key") or "").strip()
+    beneficiary = (data.get("beneficiary_address") or "").strip()
+    amount = data.get("amount")
+    timeout_ledgers = data.get("timeout_ledgers")
+    token_address = (data.get("token_address") or "").strip() or None
+
+    if not depositor or not beneficiary:
+        return jsonify({"error": "depositor_public_key and beneficiary_address required"}), 400
+    if amount is None:
+        return jsonify({"error": "amount required"}), 400
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return jsonify({"error": "amount must be an integer"}), 400
+    if timeout_ledgers is None:
+        return jsonify({"error": "timeout_ledgers required"}), 400
+    try:
+        timeout_ledgers = int(timeout_ledgers)
+    except (TypeError, ValueError):
+        return jsonify({"error": "timeout_ledgers must be an integer"}), 400
+
+    xdr, err = build_deposit_xdr(depositor, beneficiary, amount, timeout_ledgers, token_address)
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify({"transaction_xdr": xdr})
+
+
+@app.route("/api/submit", methods=["POST"])
+def submit_transaction():
+    """Submit a signed transaction envelope (XDR base64). Body: signed_envelope_xdr."""
+    try:
+        from build_deposit import submit_signed_envelope
+    except ImportError:
+        return jsonify({"error": "submit not available"}), 503
+
+    data = request.get_json() or {}
+    xdr = (data.get("signed_envelope_xdr") or "").strip()
+    if not xdr:
+        return jsonify({"error": "signed_envelope_xdr required"}), 400
+
+    result, err = submit_signed_envelope(xdr)
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify(result)
 
 
 @app.route("/api/contract/status", methods=["GET"])

@@ -11,6 +11,8 @@ NETWORK_PASSPHRASE = os.environ.get(
 )
 # Deployed inheritance contract ID (set after deploy)
 CONTRACT_ID = os.environ.get("CONTRACT_ID", "").strip()
+# Token contract address for "Lock funds" (e.g. native XLM on testnet). Required for deposit.
+DEFAULT_TOKEN_ADDRESS = os.environ.get("DEFAULT_TOKEN_ADDRESS", "").strip()
 
 # Onmeta Off-Ramp (https://documenter.getpostman.com/view/20857383/UzXNTwpM)
 # Leave empty to use built-in mock. Set to https://api.onmeta.in (or staging) for real.

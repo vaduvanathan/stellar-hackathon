@@ -88,6 +88,7 @@
     footer { margin-top: 2.5rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
     footer a { color: var(--accent); text-decoration: none; }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-freighter-api/6.0.1/index.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div class="wrap">
@@ -104,6 +105,7 @@
     <section class="card">
       <h2>Inactivity period</h2>
       <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">If you don’t <strong>ping</strong> within this time, your funds can be claimed and off-ramped to your beneficiary.</p>
+      <p style="margin: 0 0 0.75rem 0; font-size: 0.8rem; color: var(--muted);"><strong>What is “ping”?</strong> It’s an <em>on-chain transaction</em>: you (or your wallet) must call the contract’s <code>ping()</code> function from a Stellar wallet (e.g. Freighter, Stellar Laboratory). Visiting this website does <em>not</em> ping the contract.</p>
       <label for="timeout_days">Off-ramp after no activity for</label>
       <select id="timeout_days" name="timeout_days" style="width:100%;padding:0.6rem 0.75rem;margin-bottom:0.5rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.95rem;">
         <option value="7">7 days</option>
@@ -111,6 +113,31 @@
         <option value="90">90 days</option>
       </select>
       <p id="timeout-ledgers-hint" style="margin:0;font-size:0.8rem;color:var(--muted);">≈ 518,400 ledgers (used when you deposit on-chain)</p>
+    </section>
+
+    <section class="card">
+      <h2>Lock funds</h2>
+      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">Connect your Stellar wallet (e.g. Freighter), then lock tokens in the contract. You must <strong>ping</strong> before the inactivity period ends to keep the funds.</p>
+      <div style="margin-bottom: 1rem;">
+        <button type="button" id="connect-wallet-btn" class="secondary">Connect wallet</button>
+        <span id="connected-address" class="mono" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--muted);"></span>
+      </div>
+      <div id="lock-form" style="opacity: 0.7; pointer-events: none;">
+        <label for="lock_amount">Amount (whole units of token)</label>
+        <input type="number" id="lock_amount" name="lock_amount" min="1" placeholder="100" style="margin-bottom: 0.9rem;">
+        <label for="lock_beneficiary">Beneficiary Stellar address (G…)</label>
+        <input type="text" id="lock_beneficiary" name="lock_beneficiary" placeholder="GAGONWXAMFADQZUYYVTRS6W32HIJTMAHLDIM5RFMLDWILCQJXDA33P54" maxlength="56" style="margin-bottom: 0.9rem;">
+        <label for="lock_timeout_days">Inactivity period (same as above)</label>
+        <select id="lock_timeout_days" style="width:100%;padding:0.6rem 0.75rem;margin-bottom:0.9rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.95rem;">
+          <option value="7">7 days</option>
+          <option value="30" selected>30 days</option>
+          <option value="90">90 days</option>
+        </select>
+        <label for="lock_token">Token contract address (optional if server has default)</label>
+        <input type="text" id="lock_token" name="lock_token" placeholder="C... or leave empty" style="margin-bottom: 0.9rem;">
+        <button type="button" id="lock-funds-btn">Lock funds</button>
+        <div id="lock-msg" class="msg"></div>
+      </div>
     </section>
 
     <section class="card">
@@ -163,7 +190,10 @@
     async function loadStatus() {
       const el = document.getElementById('status-body');
       try {
-        const r = await fetch('/api/contract/status');
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 15000);
+        const r = await fetch('/api/contract/status', { signal: ctrl.signal });
+        clearTimeout(t);
         const d = await r.json();
         if (!r.ok) {
           el.innerHTML = `<div class="status-row"><span class="dot warn"></span> ${d.error || 'Error'}</div><div class="mono" style="margin-top:0.5rem;font-size:0.8rem">${d.hint || ''}</div>`;
@@ -171,13 +201,16 @@
         }
         const canClaim = d.can_claim ? '<span class="dot ok"></span> Claimable' : '<span class="dot no"></span> Not claimable';
         const ben = d.beneficiary_address ? `<span class="mono">${d.beneficiary_address}</span>` : '—';
+        const cid = (d.contract_id || '').trim();
+        const shortId = cid.length >= 12 ? cid.slice(0, 4) + '…' + cid.slice(-4) : cid;
         el.innerHTML = `
           <div class="status-row">${canClaim}</div>
           <div class="status-row">Beneficiary: ${ben}</div>
-          <div class="status-row" style="margin-top:0.5rem"><span class="mono" style="font-size:0.75rem">${d.contract_id || ''}</span></div>
+          <div class="status-row" style="margin-top:0.5rem"><span class="mono" style="font-size:0.75rem" title="${cid}">${shortId || '—'}</span></div>
         `;
       } catch (e) {
-        el.innerHTML = `<span class="dot warn"></span> Failed to load: ${e.message}`;
+        const msg = e.name === 'AbortError' ? 'Request timed out (RPC may be unreachable).' : e.message;
+        el.innerHTML = `<div class="status-row"><span class="dot warn"></span> Failed to load: ${msg}</div><div class="mono" style="margin-top:0.5rem;font-size:0.8rem">Check CONTRACT_ID and SOROBAN_RPC_URL in Cloud Run.</div>`;
       }
     }
 
@@ -231,6 +264,134 @@
       var days = parseInt(this.value, 10);
       var ledgers = days * 17280;
       document.getElementById('timeout-ledgers-hint').textContent = '≈ ' + ledgers.toLocaleString() + ' ledgers (used when you deposit on-chain)';
+    });
+
+    // --- Connect wallet & Lock funds ---
+    const DAYS_TO_LEDGERS = { 7: 120960, 30: 518400, 90: 1555200 };
+    let connectedPublicKey = null;
+
+    async function hasFreighter() {
+      try {
+        const api = window.freighterApi || window.freighter;
+        if (!api) return false;
+        const r = await (api.isConnected ? api.isConnected() : Promise.resolve({ isConnected: false }));
+        return r && (r.isConnected === true || r === true);
+      } catch (e) { return false; }
+    }
+
+    document.getElementById('connect-wallet-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('connect-wallet-btn');
+      const addrEl = document.getElementById('connected-address');
+      const lockForm = document.getElementById('lock-form');
+      if (connectedPublicKey) {
+        connectedPublicKey = null;
+        btn.textContent = 'Connect wallet';
+        addrEl.textContent = '';
+        lockForm.style.setProperty('opacity', '0.7');
+        lockForm.style.setProperty('pointer-events', 'none');
+        return;
+      }
+      const api = window.freighterApi || window.freighter;
+      if (!api) {
+        addrEl.textContent = 'Install Freighter extension first.';
+        addrEl.style.color = 'var(--err)';
+        return;
+      }
+      try {
+        const out = await (api.requestAccess ? api.requestAccess() : api.getPublicKey ? api.getPublicKey() : api.getAddress());
+        const key = out && (out.publicKey || out.address);
+        if (!key) throw new Error(out?.error || 'No address returned');
+        connectedPublicKey = key;
+        btn.textContent = 'Disconnect';
+        addrEl.textContent = key.slice(0, 6) + '…' + key.slice(-4);
+        addrEl.style.color = 'var(--muted)';
+        lockForm.style.setProperty('opacity', '1');
+        lockForm.style.setProperty('pointer-events', 'auto');
+      } catch (e) {
+        addrEl.textContent = e.message || 'Connection failed';
+        addrEl.style.color = 'var(--err)';
+      }
+    });
+
+    document.getElementById('lock-funds-btn').addEventListener('click', async () => {
+      const msgEl = document.getElementById('lock-msg');
+      if (!connectedPublicKey) {
+        msgEl.textContent = 'Connect wallet first.';
+        msgEl.className = 'msg err';
+        return;
+      }
+      const amount = parseInt(document.getElementById('lock_amount').value, 10);
+      const beneficiary = document.getElementById('lock_beneficiary').value.trim();
+      const days = parseInt(document.getElementById('lock_timeout_days').value, 10);
+      const token = document.getElementById('lock_token').value.trim() || undefined;
+      if (!amount || amount < 1) {
+        msgEl.textContent = 'Enter a valid amount.';
+        msgEl.className = 'msg err';
+        return;
+      }
+      if (!beneficiary || beneficiary.length !== 56 || !beneficiary.startsWith('G')) {
+        msgEl.textContent = 'Enter a valid beneficiary address (G…, 56 chars).';
+        msgEl.className = 'msg err';
+        return;
+      }
+      const timeoutLedgers = DAYS_TO_LEDGERS[days] || 518400;
+      msgEl.textContent = 'Building transaction…';
+      msgEl.className = 'msg loading';
+      try {
+        const buildRes = await api('/api/build-deposit', {
+          method: 'POST',
+          body: JSON.stringify({
+            depositor_public_key: connectedPublicKey,
+            beneficiary_address: beneficiary,
+            amount,
+            timeout_ledgers: timeoutLedgers,
+            token_address: token || undefined
+          })
+        });
+        const buildData = await buildRes.json();
+        if (!buildRes.ok) {
+          msgEl.textContent = buildData.error || 'Build failed';
+          msgEl.className = 'msg err';
+          return;
+        }
+        const txXdr = buildData.transaction_xdr;
+        if (!txXdr) {
+          msgEl.textContent = 'No transaction XDR returned';
+          msgEl.className = 'msg err';
+          return;
+        }
+        msgEl.textContent = 'Approve in Freighter…';
+        let networkPassphrase = 'Test SDF Network ; September 2015';
+        try {
+          const cfgRes = await fetch('/api/lock-config');
+          if (cfgRes.ok) {
+            const cfg = await cfgRes.json();
+            if (cfg.network_passphrase) networkPassphrase = cfg.network_passphrase;
+          }
+        } catch (_) {}
+        const freighterApi = window.freighterApi || window.freighter;
+        const signed = await (freighterApi.signTransaction ? freighterApi.signTransaction(txXdr, { networkPassphrase }) : Promise.reject(new Error('signTransaction not available')));
+        const signedXdr = signed && (signed.signedTransaction || signed.signedEnvelope || signed);
+        if (!signedXdr) {
+          msgEl.textContent = 'Signing cancelled or failed';
+          msgEl.className = 'msg err';
+          return;
+        }
+        msgEl.textContent = 'Submitting…';
+        const submitRes = await api('/api/submit', { method: 'POST', body: JSON.stringify({ signed_envelope_xdr: signedXdr }) });
+        const submitData = await submitRes.json();
+        if (!submitRes.ok) {
+          msgEl.textContent = submitData.error || 'Submit failed';
+          msgEl.className = 'msg err';
+          return;
+        }
+        msgEl.textContent = 'Submitted. Hash: ' + (submitData.hash || 'ok');
+        msgEl.className = 'msg ok';
+        loadStatus();
+      } catch (e) {
+        msgEl.textContent = e.message || 'Error';
+        msgEl.className = 'msg err';
+      }
     });
 
     loadStatus();
