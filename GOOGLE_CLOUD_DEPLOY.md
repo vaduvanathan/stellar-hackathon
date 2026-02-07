@@ -2,6 +2,8 @@
 
 ## In Google Cloud Console
 
+**After pushing code:** Trigger a new deployment (Cloud Run → service → Edit & deploy new revision, or push to the connected branch). The `/nominee` page is sent with `Cache-Control: no-cache` so users get the latest after you deploy. If you still see old behaviour, do a hard refresh (Ctrl+F5 / Cmd+Shift+R) on the nominee page.
+
 1. **Cloud Run** → **Create Service**.
 2. **Deploy from repository** → connect **GitHub** → select `vaduvanathan/stellar-hackathon`.
 3. **Build**: Dockerfile path = `backend/Dockerfile`. Build context = `backend` (or root; ensure Dockerfile is in context).

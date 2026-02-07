@@ -156,7 +156,11 @@ def index():
 @app.route("/nominee")
 def nominee_page():
     """Page where user creates / gets the secondary (sweep) key and registers nominee."""
-    return render_template("nominee.html")
+    resp = app.make_response(render_template("nominee.html"))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 @app.route("/health", methods=["GET"])
@@ -448,59 +452,13 @@ def _envelope_to_xdr_base64(envelope):
 @app.route("/api/build-add-signer", methods=["POST"])
 def build_add_signer():
     """
-    Build an unsigned 'add signer' (SetOptions) transaction for classic Stellar.
-    Body: account_public_key (your main account G...), signer_public_key (the secondary key to add).
-    Returns transaction_xdr for the user to sign with their wallet (e.g. Freighter) and submit via /api/claim/submit.
+    Legacy: add-signer is now built in the browser (nominee page). If old cached
+    frontend still calls this, return a clear message to refresh the page.
     """
-    try:
-        from config import HORIZON_URL, NETWORK_PASSPHRASE
-        from stellar_sdk import Server, Signer, TransactionBuilder
-    except ImportError as e:
-        return jsonify({"error": f"Missing dependency: {e}"}), 503
-
-    data = request.get_json() or {}
-    account_public_key = (data.get("account_public_key") or "").strip()
-    signer_public_key = (data.get("signer_public_key") or "").strip()
-    if not account_public_key or not signer_public_key:
-        return jsonify({"error": "account_public_key and signer_public_key required"}), 400
-    if len(account_public_key) != 56 or not account_public_key.startswith("G"):
-        return jsonify({"error": "account_public_key must be a Stellar public key (G..., 56 chars)"}), 400
-    if len(signer_public_key) != 56 or not signer_public_key.startswith("G"):
-        return jsonify({"error": "signer_public_key must be a Stellar public key (G..., 56 chars)"}), 400
-
-    try:
-        server = Server(horizon_url=HORIZON_URL)
-        source = server.load_account(account_public_key)
-    except Exception as e:
-        logger.exception("build_add_signer: load_account failed for %s", account_public_key[:8])
-        payload = {"error": f"Account not found or load failed: {e}", "where": "load_account"}
-        if SHOW_TRACEBACK_IN_RESPONSE:
-            payload["traceback"] = traceback.format_exc()
-        return jsonify(payload), 404
-
-    try:
-        secondary_signer = Signer.ed25519_public_key(signer_public_key, 1)
-        # TransactionBuilder.build() returns a TransactionEnvelope (SDK 11/13), not a Transaction — use it directly.
-        envelope = (
-            TransactionBuilder(
-                source_account=source,
-                network_passphrase=NETWORK_PASSPHRASE,
-                base_fee=100,
-            )
-            .append_set_options_op(signer=secondary_signer)
-            .set_timeout(180)
-            .build()
-        )
-        if hasattr(envelope, "to_transaction_envelope_v1"):
-            envelope = envelope.to_transaction_envelope_v1()
-        xdr_b64 = _envelope_to_xdr_base64(envelope)
-        return jsonify({"transaction_xdr": xdr_b64})
-    except Exception as e:
-        logger.exception("build_add_signer: build/serialize failed")
-        payload = {"error": f"Build failed: {e}", "where": "build_or_serialize"}
-        if SHOW_TRACEBACK_IN_RESPONSE:
-            payload["traceback"] = traceback.format_exc()
-        return jsonify(payload), 500
+    return jsonify({
+        "error": "Please refresh the nominee page (Ctrl+F5 or Cmd+Shift+R) to add the co-signer. The button now builds the transaction in your browser.",
+        "refresh_required": True,
+    }), 400
 
 
 @app.route("/api/contract/status", methods=["GET"])
