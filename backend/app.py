@@ -8,6 +8,8 @@ import os
 import secrets
 import sqlite3
 import sys
+import threading
+import time
 import traceback
 from pathlib import Path
 
@@ -38,7 +40,14 @@ except ImportError:
 
 from flask import Flask, g, jsonify, request, render_template
 
-from config import CONTRACT_ID, DEFAULT_TOKEN_ADDRESS, HORIZON_URL, NETWORK_PASSPHRASE, SOROBAN_RPC_URL
+from config import (
+    CONTRACT_ID,
+    DEFAULT_TOKEN_ADDRESS,
+    HORIZON_URL,
+    INACTIVITY_CHECK_INTERVAL_MINUTES,
+    NETWORK_PASSPHRASE,
+    SOROBAN_RPC_URL,
+)
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config["DATABASE"] = os.environ.get("DATABASE_PATH", "walletsurance.db")
@@ -264,7 +273,10 @@ def nominee_register():
     if isinstance(inactivity_days, str) and inactivity_days.isdigit():
         inactivity_days = int(inactivity_days)
     else:
-        inactivity_days = int(inactivity_days) if inactivity_days else 30
+        try:
+            inactivity_days = int(inactivity_days) if inactivity_days not in (None, "") else 30
+        except (TypeError, ValueError):
+            inactivity_days = 30
 
     if not depositor or not phone or not question or not answer:
         return jsonify({"error": "depositor_account_id, beneficiary_phone, question, and answer required"}), 400
@@ -626,11 +638,10 @@ def get_beneficiary(stellar_address):
     )
 
 
-@app.route("/api/agent/check-nominees", methods=["GET", "POST"])
-def agent_check_nominees():
+def _run_check_nominees():
     """
-    Check Horizon for nominee inactivity. If depositor has had no activity for inactivity_days,
-    create a claim token and send SMS to beneficiary. Call from Cloud Scheduler.
+    Core logic: check Horizon for nominee inactivity, create claim tokens, send SMS.
+    Must be called within an app context (get_db() uses g). Returns (message, sms_sent).
     """
     from datetime import datetime, timezone, timedelta
     from horizon_client import get_last_activity
@@ -641,23 +652,40 @@ def agent_check_nominees():
         "SELECT id, depositor_account_id, question, beneficiary_phone, inactivity_days FROM nominees"
     ).fetchall()
     if not nominees:
-        return jsonify({"message": "No nominees registered.", "sms_sent": 0}), 200
+        return "No nominees registered.", 0
 
     now = datetime.now(timezone.utc)
     sent = 0
     for n in nominees:
         last = get_last_activity(n["depositor_account_id"])
-        if not last:
-            continue
         try:
-            last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
-        except Exception:
-            continue
-        if last_dt.tzinfo is None:
-            last_dt = last_dt.replace(tzinfo=timezone.utc)
-        threshold = now - timedelta(days=int(n["inactivity_days"] or 30))
-        if last_dt > threshold:
-            continue
+            inactivity_days = int(n["inactivity_days"]) if n["inactivity_days"] is not None else 30
+        except (TypeError, ValueError):
+            inactivity_days = 30
+        if inactivity_days == 0:
+            threshold = now - timedelta(minutes=5)
+            last_dt = None
+            if last:
+                try:
+                    last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
+                    if last_dt.tzinfo is None:
+                        last_dt = last_dt.replace(tzinfo=timezone.utc)
+                except Exception:
+                    last_dt = None
+            if last_dt is not None and last_dt > threshold:
+                continue
+        else:
+            if not last:
+                continue
+            try:
+                last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
+            except Exception:
+                continue
+            if last_dt.tzinfo is None:
+                last_dt = last_dt.replace(tzinfo=timezone.utc)
+            threshold = now - timedelta(days=inactivity_days)
+            if last_dt > threshold:
+                continue
         existing = db.execute(
             "SELECT 1 FROM nominee_claims WHERE nominee_id = ?", (n["id"],)
         ).fetchone()
@@ -672,7 +700,45 @@ def agent_check_nominees():
         if send_nominee_claim_sms(n["beneficiary_phone"], token, n["question"]):
             sent += 1
 
-    return jsonify({"message": f"Checked {len(nominees)} nominees.", "sms_sent": sent}), 200
+    return f"Checked {len(nominees)} nominees.", sent
+
+
+_nominee_check_lock = threading.Lock()
+
+
+def _inactivity_scheduler_loop():
+    """Background loop: every N minutes run nominee check. Runs inside app context."""
+    interval_sec = INACTIVITY_CHECK_INTERVAL_MINUTES * 60
+    if interval_sec <= 0:
+        return
+    logger.info("Inactivity agent started: checking every %s minutes", INACTIVITY_CHECK_INTERVAL_MINUTES)
+    while True:
+        time.sleep(interval_sec)
+        if not _nominee_check_lock.acquire(blocking=False):
+            continue
+        try:
+            with app.app_context():
+                msg, sms_sent = _run_check_nominees()
+                logger.info("Inactivity check: %s (SMS sent: %s)", msg, sms_sent)
+        except Exception as e:
+            logger.exception("Inactivity check failed: %s", e)
+        finally:
+            _nominee_check_lock.release()
+
+
+if INACTIVITY_CHECK_INTERVAL_MINUTES > 0:
+    _scheduler_thread = threading.Thread(target=_inactivity_scheduler_loop, daemon=True)
+    _scheduler_thread.start()
+
+
+@app.route("/api/agent/check-nominees", methods=["GET", "POST"])
+def agent_check_nominees():
+    """
+    Check Horizon for nominee inactivity. If depositor has had no activity for inactivity_days,
+    create a claim token and send SMS to beneficiary. Also run by the in-backend scheduler if enabled.
+    """
+    msg, sent = _run_check_nominees()
+    return jsonify({"message": msg, "sms_sent": sent}), 200
 
 
 @app.route("/api/agent/check", methods=["GET", "POST"])

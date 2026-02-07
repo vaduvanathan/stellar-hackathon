@@ -128,8 +128,9 @@
         <input type="text" id="nominee_question" placeholder="e.g. What was the name of your first pet?">
         <label for="nominee_answer">Answer (secret – we never store it; used to encrypt the key)</label>
         <input type="password" id="nominee_answer" placeholder="Answer" autocomplete="off">
-        <label for="nominee_inactivity">Send claim SMS after no activity for (days)</label>
+        <label for="nominee_inactivity">Send claim SMS after no activity for</label>
         <select id="nominee_inactivity">
+          <option value="0">5 minutes (test)</option>
           <option value="7">7 days</option>
           <option value="30" selected>30 days</option>
           <option value="90">90 days</option>
@@ -178,38 +179,23 @@
       statusEl.style.color = 'var(--muted)';
       try {
         var api = getFreighterApi();
-        if (!api || typeof api.requestAccess !== 'function') {
-          if (!api || typeof api.signTransaction !== 'function') {
-            statusEl.textContent = 'Freighter not found. Install the extension and refresh.';
-            statusEl.style.color = 'var(--err)';
-            return;
-          }
-          if (typeof api.setAllowed === 'function') {
-            var setRes = await api.setAllowed().catch(function (e) { return { isAllowed: false, error: e }; });
-            if (setRes && setRes.isAllowed) {
-              statusEl.textContent = 'Connected. Now click "Build & sign here".';
-              statusEl.style.color = 'var(--accent)';
-              return;
-            }
-          }
-          statusEl.textContent = 'No requestAccess/setAllowed. Click "Build & sign here" and allow in Freighter if asked.';
-          statusEl.style.color = 'var(--warn)';
-          return;
-        }
-        var res = await api.requestAccess().catch(function (e) { return { error: e && (e.message || String(e)) }; });
-        if (res && res.error) {
-          statusEl.textContent = 'Freighter: ' + (typeof res.error === 'string' ? res.error : 'User denied or error');
+        if (!api || typeof api.signTransaction !== 'function') {
+          statusEl.textContent = 'Freighter not found. Install the extension and refresh.';
           statusEl.style.color = 'var(--err)';
           return;
         }
-        if (res && res.address && res.address.length > 0) {
-          statusEl.textContent = 'Connected: ' + res.address.slice(0, 8) + '… Now click "Build & sign here".';
-          statusEl.style.color = 'var(--accent)';
-          return;
+        function showAddress(addr) {
+          if (addr && addr.length > 0) {
+            statusEl.textContent = 'Connected: ' + addr.slice(0, 8) + '… Now click "Build & sign here".';
+            statusEl.style.color = 'var(--accent)';
+            return true;
+          }
+          return false;
         }
+        // Try setAllowed first — one "Allow this site?" prompt; works even when requestAccess returns empty (known bug)
         if (typeof api.setAllowed === 'function') {
           var setRes = await api.setAllowed().catch(function (e) { return { isAllowed: false, error: e }; });
-          if (setRes && setRes.isAllowed) {
+          if (setRes && (setRes.isAllowed === true || setRes.allowed === true)) {
             statusEl.textContent = 'Connected. Now click "Build & sign here".';
             statusEl.style.color = 'var(--accent)';
             return;
@@ -220,8 +206,22 @@
             return;
           }
         }
-        statusEl.textContent = 'No address returned. Sign into Freighter (unlock wallet), then click Connect again. If a Freighter popup appeared, click Allow.';
-        statusEl.style.color = 'var(--err)';
+        // Then requestAccess (may return empty address even after Allow — known Freighter bug)
+        if (typeof api.requestAccess !== 'function') {
+          statusEl.textContent = 'Click "Build & sign here" and click Allow in Freighter when asked.';
+          statusEl.style.color = 'var(--warn)';
+          return;
+        }
+        var res = await api.requestAccess().catch(function (e) { return { error: e && (e.message || String(e)) }; });
+        if (res && res.error) {
+          statusEl.textContent = 'Freighter: ' + (typeof res.error === 'string' ? res.error : 'User denied or error');
+          statusEl.style.color = 'var(--err)';
+          return;
+        }
+        var addr = (res && (res.address || res.publicKey)) || '';
+        if (showAddress(addr)) return;
+        statusEl.textContent = 'Site may already be allowed. Click "Build & sign here" — if Freighter asks, click Allow then Confirm.';
+        statusEl.style.color = 'var(--warn)';
       } catch (e) {
         statusEl.textContent = (e && e.message) || 'Connection failed';
         statusEl.style.color = 'var(--err)';
