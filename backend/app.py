@@ -6,7 +6,13 @@ Walletsurance Backend – Flask API and Agent entrypoint.
 import os
 import secrets
 import sqlite3
+import sys
 from pathlib import Path
+
+# Ensure backend directory is on path (for key_encrypt, horizon_client, etc.) when run from project root or Cloud Run
+_backend_dir = Path(__file__).resolve().parent
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
 
 # Load .env so config (and Twilio, etc.) get env vars when running Flask
 try:

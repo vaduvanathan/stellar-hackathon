@@ -8,7 +8,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 # App code
-COPY app.py config.py soroban_client.py ./
+COPY *.py ./
 COPY templates/ templates/
 
 # SQLite and env are provided at runtime (Cloud Run: env vars; DB in volume or /tmp)
