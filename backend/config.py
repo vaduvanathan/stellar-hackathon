@@ -18,3 +18,17 @@ DEFAULT_TOKEN_ADDRESS = os.environ.get("DEFAULT_TOKEN_ADDRESS", "").strip()
 # Leave empty to use built-in mock. Set to https://api.onmeta.in (or staging) for real.
 ONMETA_BASE_URL = os.environ.get("ONMETA_BASE_URL", "").strip()
 ONMETA_API_KEY = os.environ.get("ONMETA_API_KEY", "").strip()
+
+# Horizon (for inactivity detection)
+HORIZON_URL = os.environ.get(
+    "HORIZON_URL",
+    "https://horizon-testnet.stellar.org",
+).rstrip("/")
+
+# Nominee flow: SMS (Twilio). Leave empty to mock SMS (log only).
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER", "").strip()
+
+# Base URL for claim links in SMS (e.g. https://your-app.run.app)
+CLAIM_BASE_URL = os.environ.get("CLAIM_BASE_URL", "").strip()

@@ -4,8 +4,16 @@ Walletsurance Backend – Flask API and Agent entrypoint.
 - Agent: checks contracts for claimable vaults, mocks claim + Onmeta off-ramp.
 """
 import os
+import secrets
 import sqlite3
 from pathlib import Path
+
+# Load .env so config (and Twilio, etc.) get env vars when running Flask
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent / ".env")
+except ImportError:
+    pass
 
 from flask import Flask, g, jsonify, request, render_template
 
@@ -69,6 +77,36 @@ def init_db():
             db.commit()
         except sqlite3.OperationalError:
             pass
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS nominees (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                depositor_account_id TEXT NOT NULL,
+                sweep_public_key TEXT NOT NULL,
+                ciphertext_b64 TEXT NOT NULL,
+                nonce_b64 TEXT NOT NULL,
+                salt_b64 TEXT NOT NULL,
+                question TEXT NOT NULL,
+                beneficiary_phone TEXT NOT NULL,
+                beneficiary_stellar_address TEXT,
+                inactivity_days INTEGER NOT NULL DEFAULT 30,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(depositor_account_id)
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS nominee_claims (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                claim_token TEXT NOT NULL UNIQUE,
+                nominee_id INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (nominee_id) REFERENCES nominees(id)
+            )
+            """
+        )
+        db.commit()
         db.close()
 
 
@@ -76,6 +114,12 @@ def init_db():
 def index():
     """Minimal UI: contract status, register beneficiary, mock agent."""
     return render_template("index.html")
+
+
+@app.route("/nominee")
+def nominee_page():
+    """Page where user creates / gets the secondary (sweep) key and registers nominee."""
+    return render_template("nominee.html")
 
 
 @app.route("/health", methods=["GET"])
@@ -150,6 +194,176 @@ def submit_transaction():
     if err:
         return jsonify({"error": err}), 400
     return jsonify(result)
+
+
+# --- Nominee flow: co-sign key encrypted with question/answer, SMS when inactive ---
+
+@app.route("/api/nominee/register", methods=["POST"])
+def nominee_register():
+    """
+    Register a nominee: generate sweep keypair, encrypt private key with answer, store.
+    Body: depositor_account_id, beneficiary_phone, beneficiary_stellar_address (optional),
+          question, answer, inactivity_days (optional, default 30).
+    Returns: sweep_public_key (user must add this as co-signer to their account).
+    """
+    try:
+        from stellar_sdk import Keypair
+        from key_encrypt import encrypt_secret_with_answer
+    except ImportError as e:
+        return jsonify({"error": f"Missing dependency: {e}"}), 503
+
+    data = request.get_json() or {}
+    depositor = (data.get("depositor_account_id") or "").strip()
+    phone = (data.get("beneficiary_phone") or "").strip()
+    beneficiary_address = (data.get("beneficiary_stellar_address") or "").strip()
+    question = (data.get("question") or "").strip()
+    answer = (data.get("answer") or "").strip()
+    inactivity_days = data.get("inactivity_days", 30)
+    if isinstance(inactivity_days, str) and inactivity_days.isdigit():
+        inactivity_days = int(inactivity_days)
+    else:
+        inactivity_days = int(inactivity_days) if inactivity_days else 30
+
+    if not depositor or not phone or not question or not answer:
+        return jsonify({"error": "depositor_account_id, beneficiary_phone, question, and answer required"}), 400
+    if len(depositor) != 56 or not depositor.startswith("G"):
+        return jsonify({"error": "depositor_account_id must be a Stellar public key (G..., 56 chars)"}), 400
+
+    try:
+        kp = Keypair.random()
+        secret = kp.secret
+        public = kp.public_key
+    except Exception as e:
+        return jsonify({"error": f"Keypair generation failed: {e}"}), 500
+
+    try:
+        ciphertext_b64, nonce_b64, salt_b64 = encrypt_secret_with_answer(secret, answer)
+    except Exception as e:
+        return jsonify({"error": f"Encryption failed: {e}"}), 500
+
+    db = get_db()
+    try:
+        db.execute(
+            """
+            INSERT OR REPLACE INTO nominees
+            (depositor_account_id, sweep_public_key, ciphertext_b64, nonce_b64, salt_b64, question, beneficiary_phone, beneficiary_stellar_address, inactivity_days)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (depositor, public, ciphertext_b64, nonce_b64, salt_b64, question, phone, beneficiary_address or None, inactivity_days),
+        )
+        db.commit()
+    except sqlite3.IntegrityError as e:
+        return jsonify({"error": "Registration failed (duplicate depositor?)"}), 400
+
+    return jsonify({
+        "message": "Nominee registered. You must add the sweep key as a co-signer to your account.",
+        "sweep_public_key": public,
+        "instruction": "Add this public key as a signer to your Stellar account (e.g. Stellar Laboratory or Freighter). When your account is inactive for the set period, your nominee will receive an SMS and can claim by answering the question.",
+    })
+
+
+@app.route("/claim/<token>")
+def claim_page(token):
+    """Render claim page for nominee (question + answer form; decrypt and sign in browser)."""
+    return render_template("claim.html", claim_token=token)
+
+
+@app.route("/api/claim/data/<token>", methods=["GET"])
+def claim_data(token):
+    """Return question, ciphertext, nonce, salt, KDF params, network info, and account (for sweep) for the claim page."""
+    from config import HORIZON_URL, NETWORK_PASSPHRASE
+    from key_encrypt import get_kdf_params
+    from horizon_client import get_account
+
+    db = get_db()
+    row = db.execute(
+        "SELECT n.id, n.question, n.ciphertext_b64, n.nonce_b64, n.salt_b64, n.depositor_account_id, n.beneficiary_stellar_address FROM nominee_claims c JOIN nominees n ON c.nominee_id = n.id WHERE c.claim_token = ?",
+        (token.strip(),),
+    ).fetchone()
+    if not row:
+        return jsonify({"error": "Invalid or expired claim link"}), 404
+
+    depositor = row["depositor_account_id"]
+    account = get_account(depositor)
+
+    return jsonify({
+        "question": row["question"],
+        "ciphertext_b64": row["ciphertext_b64"],
+        "nonce_b64": row["nonce_b64"],
+        "salt_b64": row["salt_b64"],
+        "kdf": get_kdf_params(),
+        "network_passphrase": NETWORK_PASSPHRASE,
+        "horizon_url": HORIZON_URL,
+        "depositor_account_id": depositor,
+        "beneficiary_stellar_address": (row["beneficiary_stellar_address"] or "").strip(),
+        "account": account,
+    })
+
+
+@app.route("/api/claim/submit", methods=["POST"])
+def claim_submit():
+    """Submit signed classic transaction (sweep or add-signer). Body: signed_envelope_xdr."""
+    from horizon_client import submit_transaction
+
+    data = request.get_json() or {}
+    xdr = (data.get("signed_envelope_xdr") or "").strip()
+    if not xdr:
+        return jsonify({"error": "signed_envelope_xdr required"}), 400
+
+    result = submit_transaction(xdr)
+    if "hash" in result:
+        return jsonify({"hash": result["hash"], "status": "success"})
+    return jsonify({"error": result.get("detail", result.get("error", "Submit failed"))}), 400
+
+
+@app.route("/api/build-add-signer", methods=["POST"])
+def build_add_signer():
+    """
+    Build an unsigned 'add signer' (SetOptions) transaction for classic Stellar.
+    Body: account_public_key (your main account G...), signer_public_key (the secondary key to add).
+    Returns transaction_xdr for the user to sign with their wallet (e.g. Freighter) and submit via /api/claim/submit.
+    """
+    from config import NETWORK_PASSPHRASE
+    from horizon_client import get_account
+
+    try:
+        from stellar_sdk import Account, Network, Signer, TransactionBuilder
+        from stellar_sdk.transaction_envelope import TransactionEnvelope
+    except ImportError:
+        return jsonify({"error": "stellar_sdk not available"}), 503
+
+    data = request.get_json() or {}
+    account_public_key = (data.get("account_public_key") or "").strip()
+    signer_public_key = (data.get("signer_public_key") or "").strip()
+    if not account_public_key or not signer_public_key:
+        return jsonify({"error": "account_public_key and signer_public_key required"}), 400
+    if len(account_public_key) != 56 or not account_public_key.startswith("G"):
+        return jsonify({"error": "account_public_key must be a Stellar public key (G..., 56 chars)"}), 400
+    if len(signer_public_key) != 56 or not signer_public_key.startswith("G"):
+        return jsonify({"error": "signer_public_key must be a Stellar public key (G..., 56 chars)"}), 400
+
+    acc = get_account(account_public_key)
+    if not acc:
+        return jsonify({"error": "Account not found on network"}), 404
+    try:
+        sequence = int(acc["sequence"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid account sequence"}), 500
+
+    source = Account(account_id=account_public_key, sequence=sequence)
+    secondary_signer = Signer.ed25519_public_key(account_id=signer_public_key, weight=1)
+    tx = (
+        TransactionBuilder(
+            source_account=source,
+            network_passphrase=NETWORK_PASSPHRASE,
+            base_fee=100,
+        )
+        .append_set_options_op(signer=secondary_signer)
+        .set_timeout(180)
+        .build()
+    )
+    envelope = TransactionEnvelope(transaction=tx, network_passphrase=NETWORK_PASSPHRASE)
+    return jsonify({"transaction_xdr": envelope.to_xdr()})
 
 
 @app.route("/api/contract/status", methods=["GET"])
@@ -258,6 +472,55 @@ def get_beneficiary(stellar_address):
             "bank_name": row["bank_name"],
         }
     )
+
+
+@app.route("/api/agent/check-nominees", methods=["GET", "POST"])
+def agent_check_nominees():
+    """
+    Check Horizon for nominee inactivity. If depositor has had no activity for inactivity_days,
+    create a claim token and send SMS to beneficiary. Call from Cloud Scheduler.
+    """
+    from datetime import datetime, timezone, timedelta
+    from horizon_client import get_last_activity
+    from sms_client import send_nominee_claim_sms
+
+    db = get_db()
+    nominees = db.execute(
+        "SELECT id, depositor_account_id, question, beneficiary_phone, inactivity_days FROM nominees"
+    ).fetchall()
+    if not nominees:
+        return jsonify({"message": "No nominees registered.", "sms_sent": 0}), 200
+
+    now = datetime.now(timezone.utc)
+    sent = 0
+    for n in nominees:
+        last = get_last_activity(n["depositor_account_id"])
+        if not last:
+            continue
+        try:
+            last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
+        except Exception:
+            continue
+        if last_dt.tzinfo is None:
+            last_dt = last_dt.replace(tzinfo=timezone.utc)
+        threshold = now - timedelta(days=int(n["inactivity_days"] or 30))
+        if last_dt > threshold:
+            continue
+        existing = db.execute(
+            "SELECT 1 FROM nominee_claims WHERE nominee_id = ?", (n["id"],)
+        ).fetchone()
+        if existing:
+            continue
+        token = secrets.token_urlsafe(24)
+        db.execute(
+            "INSERT INTO nominee_claims (claim_token, nominee_id) VALUES (?, ?)",
+            (token, n["id"]),
+        )
+        db.commit()
+        if send_nominee_claim_sms(n["beneficiary_phone"], token, n["question"]):
+            sent += 1
+
+    return jsonify({"message": f"Checked {len(nominees)} nominees.", "sms_sent": sent}), 200
 
 
 @app.route("/api/agent/check", methods=["GET", "POST"])

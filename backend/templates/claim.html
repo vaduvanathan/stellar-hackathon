@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claim – Walletsurance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #3fb950;
+      --accent-dim: #238636;
+      --warn: #d29922;
+      --err: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 2rem 1rem; }
+    h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem 0; }
+    .tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .card h2 { font-size: 0.9rem; font-weight: 600; margin: 0 0 0.75rem 0; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    label { display: block; margin-bottom: 0.35rem; color: var(--muted); font-size: 0.85rem; }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 0.9rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+    input:focus { outline: none; border-color: var(--accent); }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-dim); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .msg { margin-top: 0.75rem; font-size: 0.9rem; }
+    .msg.ok { color: var(--accent); }
+    .msg.err { color: var(--err); }
+    .msg.loading { color: var(--muted); }
+    code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: rgba(255,255,255,0.06); padding: 0.15em 0.4em; border-radius: 4px; word-break: break-all; }
+    .hidden { display: none; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/stellar-sdk@11.2.0/dist/stellar-sdk.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Walletsurance Claim</h1>
+    <p class="tagline">You’ve been named as a nominee. Answer the question to unlock and sweep funds to your address.</p>
+
+    <div id="load-err" class="card hidden">
+      <p class="msg err" id="load-err-text"></p>
+    </div>
+
+    <div id="claim-card" class="card hidden">
+      <h2>Question</h2>
+      <p id="question-text" style="margin: 0 0 1rem 0;"></p>
+      <label for="answer">Your answer (unlocks the key only in this browser; we never see it)</label>
+      <input type="password" id="answer" name="answer" placeholder="Enter the answer" autocomplete="off">
+      <label for="beneficiary">Receive funds at (Stellar address G…)</label>
+      <input type="text" id="beneficiary" name="beneficiary" placeholder="G..." maxlength="56">
+      <button type="button" id="claim-btn">Unlock &amp; claim</button>
+      <div id="claim-msg" class="msg"></div>
+    </div>
+
+    <div id="loading" class="card">
+      <p class="msg loading">Loading claim data…</p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const claimToken = "{{ claim_token }}";
+      if (!claimToken) {
+        document.getElementById('loading').classList.add('hidden');
+        const el = document.getElementById('load-err');
+        el.classList.remove('hidden');
+        el.querySelector('#load-err-text').textContent = 'Invalid claim link.';
+        return;
+      }
+
+      let claimData = null;
+
+      async function loadClaimData() {
+        const r = await fetch("/api/claim/data/" + encodeURIComponent(claimToken));
+        const data = await r.json().catch(() => ({}));
+        document.getElementById('loading').classList.add('hidden');
+        if (!r.ok) {
+          document.getElementById('load-err').classList.remove('hidden');
+          document.getElementById('load-err-text').textContent = data.error || 'Invalid or expired claim link.';
+          return;
+        }
+        claimData = data;
+        document.getElementById('claim-card').classList.remove('hidden');
+        document.getElementById('question-text').textContent = data.question || '(No question)';
+        const benInput = document.getElementById('beneficiary');
+        if (data.beneficiary_stellar_address) benInput.value = data.beneficiary_stellar_address;
+        if (!data.account) {
+          const q = document.getElementById('question-text');
+          q.innerHTML = q.textContent + ' <span style="color:var(--warn);font-size:0.9rem;">(Depositor account not found on network; claim may fail.)</span>';
+        }
+      }
+
+      function str2ab(s) {
+        const buf = new ArrayBuffer(s.length);
+        const view = new Uint8Array(buf);
+        for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i);
+        return buf;
+      }
+      function b64decode(b64) {
+        const bin = atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
+        return str2ab(bin);
+      }
+
+      async function deriveKey(password, salt, iterations, keyLen) {
+        const enc = new TextEncoder();
+        const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+        const derived = await crypto.subtle.deriveBits(
+          { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+          key,
+          keyLen * 8
+        );
+        return crypto.subtle.importKey('raw', derived, { name: 'AES-GCM' }, false, ['decrypt']);
+      }
+
+      async function decryptSecret(ciphertextBuf, nonceBuf, key) {
+        const pt = await crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: nonceBuf },
+          key,
+          ciphertextBuf
+        );
+        return new TextDecoder().decode(pt);
+      }
+
+      async function unlockSecret(answer) {
+        const kdf = claimData.kdf;
+        const iterations = kdf.iterations || 100000;
+        const keyLen = kdf.keyLength || 32;
+        const salt = b64decode(claimData.salt_b64);
+        const nonce = b64decode(claimData.nonce_b64);
+        const ciphertext = b64decode(claimData.ciphertext_b64);
+        const key = await deriveKey(answer, salt, iterations, keyLen);
+        return await decryptSecret(ciphertext, nonce, key);
+      }
+
+      function parseStellarDecimal(str) {
+        const s = String(str).trim();
+        const idx = s.indexOf('.');
+        if (idx === -1) return { whole: s, frac: '0000000' };
+        return { whole: s.slice(0, idx) || '0', frac: (s.slice(idx + 1) + '0000000').slice(0, 7) };
+      }
+      function toStroops(whole, frac) {
+        const w = BigInt(whole);
+        const f = frac.padEnd(7, '0').slice(0, 7);
+        return w * 10000000n + BigInt(f);
+      }
+      function fromStroops(stroops) {
+        const s = stroops.toString().padStart(8, '0');
+        const frac = s.slice(-7);
+        const whole = s.slice(0, -7) || '0';
+        return whole + '.' + frac;
+      }
+
+      async function buildSweepTransaction(secretKey, beneficiaryAddress) {
+        const StellarSdk = window.StellarSdk;
+        const account = claimData.account;
+        if (!account || !account.balances || account.balances.length === 0) {
+          throw new Error('Account not found or has no balances to sweep.');
+        }
+        const networkPassphrase = claimData.network_passphrase;
+        const BASE_RESERVE = 5000000;
+        const subentryCount = parseInt(account.subentry_count, 10) || 0;
+        const reserveStroops = (2 + subentryCount) * BASE_RESERVE;
+        const keypair = StellarSdk.Keypair.fromSecret(secretKey);
+        const sequence = account.sequence;
+        const sourceAccount = new StellarSdk.Account(keypair.publicKey(), sequence);
+        const fee = (typeof StellarSdk.BASE_FEE !== 'undefined') ? StellarSdk.BASE_FEE : 100;
+        const builder = new StellarSdk.TransactionBuilder(sourceAccount, {
+          fee: String(fee),
+          networkPassphrase: networkPassphrase,
+        });
+        let opCount = 0;
+        for (const bal of account.balances) {
+          if (bal.asset_type === 'native') {
+            const { whole, frac } = parseStellarDecimal(bal.balance);
+            const stroops = toStroops(whole, frac);
+            if (stroops <= reserveStroops) continue;
+            const spendableStroops = stroops - BigInt(reserveStroops);
+            const amountStr = fromStroops(spendableStroops);
+            builder.addOperation(StellarSdk.Operation.payment({
+              destination: beneficiaryAddress,
+              asset: StellarSdk.Asset.native(),
+              amount: amountStr,
+            }));
+            opCount++;
+          } else {
+            const code = bal.asset_code;
+            const issuer = bal.asset_issuer;
+            const amountStr = String(bal.balance);
+            if (parseFloat(amountStr) <= 0) continue;
+            const asset = new StellarSdk.Asset(code, issuer);
+            builder.addOperation(StellarSdk.Operation.payment({
+              destination: beneficiaryAddress,
+              asset: asset,
+              amount: amountStr,
+            }));
+            opCount++;
+          }
+        }
+        if (opCount === 0) throw new Error('No spendable balance to sweep (native may be below reserve).');
+        const tx = builder.setTimeout(180).build();
+        tx.sign(keypair);
+        return tx.toEnvelope().toXDR('base64');
+      }
+
+      document.getElementById('claim-btn').addEventListener('click', async function () {
+        const msgEl = document.getElementById('claim-msg');
+        const answer = document.getElementById('answer').value.trim();
+        const beneficiary = document.getElementById('beneficiary').value.trim();
+        if (!answer) {
+          msgEl.textContent = 'Enter the answer.';
+          msgEl.className = 'msg err';
+          return;
+        }
+        if (!beneficiary || beneficiary.length !== 56 || !beneficiary.startsWith('G')) {
+          msgEl.textContent = 'Enter a valid Stellar address (G…, 56 characters).';
+          msgEl.className = 'msg err';
+          return;
+        }
+        msgEl.textContent = 'Unlocking…';
+        msgEl.className = 'msg loading';
+        document.getElementById('claim-btn').disabled = true;
+        try {
+          const secretKey = await unlockSecret(answer);
+          msgEl.textContent = 'Building sweep transaction…';
+          const signedXdr = await buildSweepTransaction(secretKey, beneficiary);
+          msgEl.textContent = 'Submitting…';
+          const r = await fetch('/api/claim/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ signed_envelope_xdr: signedXdr }),
+          });
+          const data = await r.json().catch(() => ({}));
+          if (r.ok && data.status === 'success') {
+            msgEl.textContent = 'Success! Transaction hash: ' + (data.hash || 'submitted');
+            msgEl.className = 'msg ok';
+          } else {
+            msgEl.textContent = data.error || 'Submit failed';
+            msgEl.className = 'msg err';
+          }
+        } catch (e) {
+          msgEl.textContent = e.message || 'Error (wrong answer or no balance?)';
+          msgEl.className = 'msg err';
+        }
+        document.getElementById('claim-btn').disabled = false;
+      });
+
+      loadClaimData();
+    })();
+  </script>
+</body>
+</html>
