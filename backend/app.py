@@ -189,6 +189,62 @@ def get_beneficiary(stellar_address):
     )
 
 
+@app.route("/api/agent/check", methods=["GET", "POST"])
+def agent_check():
+    """
+    Agent step 1: Check chain for claimable vault; if so, run mock claim + off-ramp.
+    Call this from Cloud Scheduler (e.g. every hour). Uses CONTRACT_ID from env.
+    """
+    try:
+        from soroban_client import get_contract_status
+        from config import CONTRACT_ID
+    except ImportError:
+        return jsonify({"error": "Soroban client not available"}), 503
+
+    if not CONTRACT_ID:
+        return jsonify({"message": "No CONTRACT_ID set; nothing to check.", "claim_mock": "skipped"}), 200
+
+    status = get_contract_status()
+    if not status or not status.get("can_claim"):
+        return jsonify({
+            "message": "Contract not claimable (no deposit or timeout not reached).",
+            "can_claim": status.get("can_claim") if status else None,
+            "claim_mock": "skipped",
+        }), 200
+
+    beneficiary_address = (status.get("beneficiary_address") or "").strip()
+    db = get_db()
+    bank_info = None
+    if beneficiary_address:
+        row = db.execute(
+            "SELECT stellar_address, bank_account_holder, bank_name FROM beneficiaries WHERE stellar_address = ?",
+            (beneficiary_address,),
+        ).fetchone()
+        if row:
+            bank_info = dict(row)
+
+    try:
+        db.execute(
+            """
+            INSERT INTO agent_runs (contract_id, beneficiary_address, amount_mocked, offramp_mock_status)
+            VALUES (?, ?, ?, ?)
+            """,
+            (CONTRACT_ID, beneficiary_address or None, "0", "mocked_success"),
+        )
+        db.commit()
+    except sqlite3.Error:
+        pass
+
+    return jsonify({
+        "message": "Claimable: ran mock claim + off-ramp (real claim would need AGENT_SECRET_KEY).",
+        "can_claim": True,
+        "beneficiary_address": beneficiary_address or None,
+        "bank_info_stored": bank_info is not None,
+        "claim_mock": "success",
+        "offramp_mock": "Onmeta Off-Ramp API mocked – fiat wire simulated",
+    }), 200
+
+
 @app.route("/api/agent/run", methods=["POST"])
 def agent_run():
     """

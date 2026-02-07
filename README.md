@@ -27,9 +27,10 @@
 - **RPC:** Set `CONTRACT_ID` and `SOROBAN_RPC_URL` (default Testnet) to read contract state on-chain.
 - **Mocking:** No real money; Onmeta Off-Ramp and OTP are mocked.
 
-### Hosting
+### Hosting & agent
 
-- Intended for **Google Cloud** (Cloud Run or Compute Engine); repo can be connected manually for deploy.
+- **Deploy:** Dockerfile in `backend/` for **Google Cloud Run**. See **[DEPLOY.md](DEPLOY.md)** for steps.
+- **Agent:** `GET /api/agent/check` checks the contract on-chain; if `can_claim` is true, runs mock claim + off-ramp. Call from **Cloud Scheduler** (e.g. hourly) to run the agent automatically.
 
 ## Quick start
 
