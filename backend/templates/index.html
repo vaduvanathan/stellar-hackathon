@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Walletsurance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #3fb950;
+      --accent-dim: #238636;
+      --warn: #d29922;
+      --err: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .wrap { max-width: 560px; margin: 0 auto; padding: 2rem 1rem; }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin: 0 0 0.25rem 0;
+      letter-spacing: -0.02em;
+    }
+    .tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .card h2 { font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem 0; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .status-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .status-row:last-child { margin-bottom: 0; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot.ok { background: var(--accent); }
+    .dot.no { background: var(--muted); }
+    .dot.warn { background: var(--warn); }
+    code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: rgba(255,255,255,0.06); padding: 0.15em 0.4em; border-radius: 4px; word-break: break-all; }
+    label { display: block; margin-bottom: 0.35rem; color: var(--muted); font-size: 0.85rem; }
+    input[type="text"], input[type="email"] {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 0.9rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+    input::placeholder { color: var(--muted); }
+    input:focus { outline: none; border-color: var(--accent); }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-dim); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    button.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    button.secondary:hover { border-color: var(--muted); }
+    .msg { margin-top: 0.75rem; font-size: 0.9rem; padding: 0.5rem 0; }
+    .msg.ok { color: var(--accent); }
+    .msg.err { color: var(--err); }
+    .loading { color: var(--muted); }
+    footer { margin-top: 2.5rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Walletsurance</h1>
+    <p class="tagline">On-chain inheritance · Dead Man's Switch</p>
+
+    <section class="card" id="status-card">
+      <h2>Contract status</h2>
+      <div id="status-body">
+        <span class="loading">Loading…</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Inactivity period</h2>
+      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">If you don’t <strong>ping</strong> within this time, your funds can be claimed and off-ramped to your beneficiary.</p>
+      <label for="timeout_days">Off-ramp after no activity for</label>
+      <select id="timeout_days" name="timeout_days" style="width:100%;padding:0.6rem 0.75rem;margin-bottom:0.5rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.95rem;">
+        <option value="7">7 days</option>
+        <option value="30" selected>30 days</option>
+        <option value="90">90 days</option>
+      </select>
+      <p id="timeout-ledgers-hint" style="margin:0;font-size:0.8rem;color:var(--muted);">≈ 518,400 ledgers (used when you deposit on-chain)</p>
+    </section>
+
+    <section class="card">
+      <h2>Register beneficiary</h2>
+      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;"><a href="#get-account" style="color:var(--accent);">Don’t have a Stellar address? Get one below.</a></p>
+      <form id="beneficiary-form">
+        <label for="stellar_address">Stellar address (G…, 56 characters)</label>
+        <input type="text" id="stellar_address" name="stellar_address" placeholder="GAGONWXAMFADQZUYYVTRS6W32HIJTMAHLDIM5RFMLDWILCQJXDA33P54" required pattern="^G[A-Z2-7]{55}$" maxlength="56" title="Must start with G and be 56 characters">
+        <label for="contract_id">Contract ID (optional)</label>
+        <input type="text" id="contract_id" name="contract_id" placeholder="CCOZSAWX2SEGGGXVRP2ZQFR7Y5GZIV64VBLJFUH2PHY4HG7KQDVOENMJ">
+        <label for="bank_holder">Account holder name (mock)</label>
+        <input type="text" id="bank_holder" name="bank_account_holder" placeholder="Jane Doe">
+        <label for="bank_account_number">Account number (mock)</label>
+        <input type="text" id="bank_account_number" name="bank_account_number" placeholder="1234567890">
+        <label for="bank_ifsc">IFSC code (mock)</label>
+        <input type="text" id="bank_ifsc" name="bank_ifsc" placeholder="SBIN0001234">
+        <label for="bank_name">Bank name (mock)</label>
+        <input type="text" id="bank_name" name="bank_name" placeholder="Example Bank">
+        <button type="submit">Register</button>
+        <div id="beneficiary-msg" class="msg"></div>
+      </form>
+    </section>
+
+    <section class="card" id="get-account">
+      <h2>How to get a Stellar account</h2>
+      <ol style="margin:0;padding-left:1.25rem;color:var(--muted);font-size:0.9rem;line-height:1.8;">
+        <li>Open <a href="https://laboratory.stellar.org/#account-creator?network=test" target="_blank" rel="noopener" style="color:var(--accent);">Stellar Laboratory – Account Creator</a> (Test network).</li>
+        <li>Click <strong>Generate keypair</strong>. Copy your <strong>Public key</strong> (G…) and <strong>Secret key</strong> (S…). Keep the secret safe.</li>
+        <li>Paste your public key in the box and click <strong>Fund account</strong> to get test XLM from Friendbot.</li>
+        <li>Use the <strong>Public key</strong> (G…) as the Stellar address when registering a beneficiary above.</li>
+      </ol>
+      <p style="margin:0.75rem 0 0;font-size:0.85rem;color:var(--muted);">Or fund via URL: <code>https://friendbot.stellar.org/?addr=YOUR_PUBLIC_KEY</code></p>
+    </section>
+
+    <section class="card">
+      <h2>Agent (mock)</h2>
+      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">Trigger a mock claim + off-ramp run. No real funds moved.</p>
+      <button type="button" id="agent-btn" class="secondary">Run agent</button>
+      <div id="agent-msg" class="msg"></div>
+    </section>
+
+    <footer>
+      Stellar Build-A-Thon Chennai · <a href="https://github.com/vaduvanathan/stellar-hackathon">GitHub</a>
+    </footer>
+  </div>
+
+  <script>
+    const api = (path, opts = {}) => fetch(path, { headers: { 'Content-Type': 'application/json', ...opts.headers }, ...opts });
+
+    async function loadStatus() {
+      const el = document.getElementById('status-body');
+      try {
+        const r = await fetch('/api/contract/status');
+        const d = await r.json();
+        if (!r.ok) {
+          el.innerHTML = `<div class="status-row"><span class="dot warn"></span> ${d.error || 'Error'}</div><div class="mono" style="margin-top:0.5rem;font-size:0.8rem">${d.hint || ''}</div>`;
+          return;
+        }
+        const canClaim = d.can_claim ? '<span class="dot ok"></span> Claimable' : '<span class="dot no"></span> Not claimable';
+        const ben = d.beneficiary_address ? `<span class="mono">${d.beneficiary_address}</span>` : '—';
+        el.innerHTML = `
+          <div class="status-row">${canClaim}</div>
+          <div class="status-row">Beneficiary: ${ben}</div>
+          <div class="status-row" style="margin-top:0.5rem"><span class="mono" style="font-size:0.75rem">${d.contract_id || ''}</span></div>
+        `;
+      } catch (e) {
+        el.innerHTML = `<span class="dot warn"></span> Failed to load: ${e.message}`;
+      }
+    }
+
+    document.getElementById('beneficiary-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('beneficiary-msg');
+      msg.textContent = '';
+      msg.className = 'msg';
+      const body = {
+        stellar_address: document.getElementById('stellar_address').value.trim(),
+        contract_id: document.getElementById('contract_id').value.trim() || undefined,
+        bank_account_holder: document.getElementById('bank_holder').value.trim() || undefined,
+        bank_account_number: document.getElementById('bank_account_number').value.trim() || undefined,
+        bank_ifsc: document.getElementById('bank_ifsc').value.trim() || undefined,
+        bank_name: document.getElementById('bank_name').value.trim() || undefined,
+        timeout_days: document.getElementById('timeout_days').value || undefined
+      };
+      try {
+        const r = await api('/api/beneficiary', { method: 'POST', body: JSON.stringify(body) });
+        const d = await r.json();
+        if (r.ok) {
+          msg.textContent = d.message || 'Registered.';
+          msg.className = 'msg ok';
+          loadStatus();
+        } else {
+          msg.textContent = d.error || 'Error';
+          msg.className = 'msg err';
+        }
+      } catch (e) {
+        msg.textContent = e.message;
+        msg.className = 'msg err';
+      }
+    });
+
+    document.getElementById('agent-btn').addEventListener('click', async () => {
+      const msg = document.getElementById('agent-msg');
+      msg.textContent = 'Running…';
+      msg.className = 'msg loading';
+      try {
+        const r = await api('/api/agent/run', { method: 'POST', body: '{}' });
+        const d = await r.json();
+        msg.textContent = d.message || (d.offramp_mock || 'Done.');
+        msg.className = 'msg ok';
+      } catch (e) {
+        msg.textContent = e.message;
+        msg.className = 'msg err';
+      }
+    });
+
+    document.getElementById('timeout_days').addEventListener('change', function() {
+      var days = parseInt(this.value, 10);
+      var ledgers = days * 17280;
+      document.getElementById('timeout-ledgers-hint').textContent = '≈ ' + ledgers.toLocaleString() + ' ledgers (used when you deposit on-chain)';
+    });
+
+    loadStatus();
+  </script>
+</body>
+</html>

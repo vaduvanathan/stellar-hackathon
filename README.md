@@ -23,7 +23,7 @@
 ### Backend (Python / Flask)
 
 - **Database:** SQLite (mock beneficiary bank details).
-- **Endpoints:** health, register beneficiary, get beneficiary, **contract status** (reads `can_claim` / `beneficiary` from chain), mock agent run, list agent runs.
+- **Endpoints:** **`/`** minimal UI; health, register beneficiary, get beneficiary, **contract status** (reads `can_claim` / `beneficiary` from chain), mock agent run, list agent runs.
 - **RPC:** Set `CONTRACT_ID` and `SOROBAN_RPC_URL` (default Testnet) to read contract state on-chain.
 - **Mocking:** No real money; Onmeta Off-Ramp and OTP are mocked.
 
@@ -64,6 +64,7 @@ pip install -r requirements.txt
 export CONTRACT_ID=<deployed-contract-id>   # optional, for /api/contract/status
 python app.py
 # API: http://localhost:8080/health
+# Minimal UI: http://localhost:8080/
 # Contract status: http://localhost:8080/api/contract/status
 ```
 

@@ -7,25 +7,34 @@ import os
 import sqlite3
 from pathlib import Path
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request, render_template
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config["DATABASE"] = os.environ.get("DATABASE_PATH", "walletsurance.db")
 
 
 def get_db():
-    db = getattr(app, "_database", None)
-    if db is None:
+    """Per-request DB connection (thread-safe)."""
+    if "db" not in g:
         db_path = app.config["DATABASE"]
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        app._database = sqlite3.connect(db_path)
-        app._database.row_factory = sqlite3.Row
-    return app._database
+        g.db = sqlite3.connect(db_path)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+
+@app.teardown_appcontext
+def close_db(exception=None):
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
 
 
 def init_db():
     with app.app_context():
-        db = get_db()
+        db_path = app.config["DATABASE"]
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        db = sqlite3.connect(db_path)
         db.execute(
             """
             CREATE TABLE IF NOT EXISTS beneficiaries (
@@ -53,6 +62,18 @@ def init_db():
             """
         )
         db.commit()
+        try:
+            db.execute("ALTER TABLE beneficiaries ADD COLUMN timeout_days INTEGER")
+            db.commit()
+        except sqlite3.OperationalError:
+            pass
+        db.close()
+
+
+@app.route("/")
+def index():
+    """Minimal UI: contract status, register beneficiary, mock agent."""
+    return render_template("index.html")
 
 
 @app.route("/health", methods=["GET"])
@@ -97,9 +118,17 @@ def register_beneficiary():
     bank_account_number = (data.get("bank_account_number") or "").strip()
     bank_ifsc = (data.get("bank_ifsc") or "").strip()
     bank_name = (data.get("bank_name") or "").strip()
+    timeout_days = data.get("timeout_days")
+    if timeout_days is not None:
+        try:
+            timeout_days = int(timeout_days) if timeout_days != "" else None
+        except (TypeError, ValueError):
+            timeout_days = None
 
     if not stellar_address:
         return jsonify({"error": "stellar_address required"}), 400
+    if not stellar_address.startswith("G") or len(stellar_address) < 55:
+        return jsonify({"error": "Stellar address must start with G and be 56 characters (e.g. GAGONWX...)"}), 400
 
     db = get_db()
     try:
@@ -107,14 +136,15 @@ def register_beneficiary():
             """
             INSERT INTO beneficiaries (
                 stellar_address, contract_id, bank_account_holder,
-                bank_account_number, bank_ifsc, bank_name
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                bank_account_number, bank_ifsc, bank_name, timeout_days
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(stellar_address) DO UPDATE SET
                 contract_id=excluded.contract_id,
                 bank_account_holder=excluded.bank_account_holder,
                 bank_account_number=excluded.bank_account_number,
                 bank_ifsc=excluded.bank_ifsc,
-                bank_name=excluded.bank_name
+                bank_name=excluded.bank_name,
+                timeout_days=excluded.timeout_days
             """,
             (
                 stellar_address,
@@ -123,6 +153,7 @@ def register_beneficiary():
                 bank_account_number or None,
                 bank_ifsc or None,
                 bank_name or None,
+                timeout_days,
             ),
         )
         db.commit()
@@ -176,9 +207,9 @@ def agent_run():
     if not contract_id and not beneficiary_address:
         return jsonify(
             {
-                "message": "Agent run (mocked). No contract_id/beneficiary provided; simulating success.",
+                "message": "Agent run completed (mocked). No contract_id/beneficiary in request; nothing to claim.",
                 "claim_mock": "skipped",
-                "offramp_mock": "skipped",
+                "offramp_mock": "Onmeta Off-Ramp API mocked – fiat wire simulated",
             }
         )
 
