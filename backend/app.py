@@ -267,8 +267,10 @@ def nominee_register():
             (depositor, public, ciphertext_b64, nonce_b64, salt_b64, question, phone, beneficiary_address or None, inactivity_days),
         )
         db.commit()
-    except sqlite3.IntegrityError as e:
+    except sqlite3.IntegrityError:
         return jsonify({"error": "Registration failed (duplicate depositor?)"}), 400
+    except sqlite3.Error as e:
+        return jsonify({"error": f"Database error: {e}"}), 500
 
     return jsonify({
         "message": "Nominee registered. You must add the sweep key as a co-signer to your account.",
@@ -743,7 +745,11 @@ def agent_runs_list():
     return jsonify([dict(r) for r in rows])
 
 
-if __name__ == "__main__":
+# Ensure DB tables exist when app is loaded (e.g. by gunicorn on Cloud Run); otherwise nominee/register returns 500
+with app.app_context():
     init_db()
+
+
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port, debug=os.environ.get("FLASK_DEBUG", "0") == "1")
