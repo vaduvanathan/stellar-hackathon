@@ -31,21 +31,51 @@
       line-height: 1.6;
     }
     .wrap { max-width: 560px; margin: 0 auto; padding: 2rem 1rem; }
+    .hero {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .stellar-logo-wrap {
+      display: inline-block;
+      width: 80px;
+      height: 80px;
+      margin-bottom: 1rem;
+      perspective: 400px;
+    }
+    .stellar-logo-inner {
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      animation: stellar-spin 8s linear infinite;
+    }
+    .stellar-logo-inner svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    @keyframes stellar-spin {
+      from { transform: rotateY(0deg) rotateX(12deg); }
+      to { transform: rotateY(360deg) rotateX(12deg); }
+    }
     h1 {
-      font-size: 1.75rem;
+      font-size: 1.9rem;
       font-weight: 600;
-      margin: 0 0 0.25rem 0;
+      margin: 0 0 0.5rem 0;
       letter-spacing: -0.02em;
     }
-    .tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+    .tagline { color: var(--muted); font-size: 1rem; line-height: 1.5; margin: 0; }
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 1.25rem 1.5rem;
+      padding: 1.5rem 1.5rem;
       margin-bottom: 1.25rem;
     }
     .card h2 { font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem 0; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .card-desc { margin: 0 0 1.25rem 0; color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+    .card-actions { display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+    .card-actions .btn { margin-right: 0; }
+    .card-divider { margin: 1.25rem 0 0.75rem 0; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }
     .status-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
     .status-row:last-child { margin-bottom: 0; }
     .dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -88,22 +118,38 @@
     .loading { color: var(--muted); }
     footer { margin-top: 2.5rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
     footer a { color: var(--accent); text-decoration: none; }
-    a.btn { display: inline-block; background: var(--accent); color: #fff; padding: 0.6rem 1.1rem; border-radius: 8px; font-weight: 600; text-decoration: none; }
+    .contract-line { margin-top: 0.5rem; font-size: 0.8rem; color: var(--muted); }
+    .contract-line code { font-size: 0.75em; }
+    a.btn { display: inline-block; background: var(--accent); color: #fff; padding: 0.65rem 1.25rem; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.95rem; }
     a.btn:hover { background: var(--accent-dim); color: #fff; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Walletsurance</h1>
-    <p class="tagline">When you’re inactive, your nominee gets an SMS and can claim your entire wallet.</p>
+    <header class="hero">
+      <div class="stellar-logo-wrap" aria-hidden="true">
+        <div class="stellar-logo-inner">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="background: #fff; border-radius: 50%;">
+            <circle cx="32" cy="32" r="30" stroke="#0a0a0a" stroke-width="2.5" fill="none"/>
+            <line x1="14" y1="14" x2="50" y2="50" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="50" y1="14" x2="14" y2="50" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+      <h1>Walletsurance</h1>
+      <p class="tagline">When you’re inactive, your nominee gets an SMS and can claim your entire wallet.</p>
+    </header>
 
     <section class="card" id="nominee-section">
       <h2>Set up nominee (SMS when you’re inactive)</h2>
-      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">Your funds <strong>stay in your Stellar account</strong> — nothing is locked in a contract. You create a <strong>secondary (sweep) key</strong>, add it as a co-signer to your account, and register a nominee. When you have <strong>no activity</strong> for the set period, we send an <strong>SMS</strong> with a claim link. Your nominee answers a secret question and can then sweep <strong>the entire balance</strong> to their address.</p>
-      <a href="/nominee" class="btn">Create secondary key &amp; register nominee</a>
-      <p style="margin: 1rem 0 0.5rem 0; font-size: 0.85rem; color: var(--muted);">Already set up? Run the inactivity check and send SMS to nominees:</p>
-      <button type="button" id="check-nominees-btn" class="secondary" style="margin-top:0.25rem;">Check nominees &amp; send SMS</button>
-      <div id="check-nominees-msg" class="msg"></div>
+      <p class="card-desc">Your funds <strong>stay in your Stellar account</strong> — nothing is locked in a contract. Create a <strong>secondary (sweep) key</strong>, add it as a co-signer, and register a nominee. After <strong>no activity</strong> for the set period, we send an <strong>SMS</strong> with a claim link. Your nominee answers a secret question and can sweep <strong>the full balance</strong> to their address.</p>
+      <div class="card-actions">
+        <a href="/nominee" class="btn">Create secondary key &amp; register nominee</a>
+        <div class="card-divider">Already set up?</div>
+        <p style="margin:0 0 0.25rem 0; font-size: 0.85rem; color: var(--muted);">Run the inactivity check and send SMS to nominees:</p>
+        <button type="button" id="check-nominees-btn" class="secondary">Check nominees &amp; send SMS</button>
+        <div id="check-nominees-msg" class="msg"></div>
+      </div>
     </section>
 
     <section class="card" id="get-account">
@@ -111,14 +157,15 @@
       <ol style="margin:0;padding-left:1.25rem;color:var(--muted);font-size:0.9rem;line-height:1.8;">
         <li>Open <a href="https://laboratory.stellar.org/#account-creator?network=test" target="_blank" rel="noopener" style="color:var(--accent);">Stellar Laboratory – Account Creator</a> (Test network).</li>
         <li>Click <strong>Generate keypair</strong>. Copy your <strong>Public key</strong> (G…) and <strong>Secret key</strong> (S…). Keep the secret safe.</li>
-        <li>Paste your public key in the box and click <strong>Fund account</strong> to get test XLM from Friendbot.</li>
+        <li>Paste your public key and click <strong>Fund account</strong> to get test XLM from Friendbot.</li>
         <li>Use the <strong>Public key</strong> (G…) as your account when you create a secondary key and register a nominee above.</li>
       </ol>
       <p style="margin:0.75rem 0 0;font-size:0.85rem;color:var(--muted);">Or fund via URL: <code>https://friendbot.stellar.org/?addr=YOUR_PUBLIC_KEY</code></p>
     </section>
 
     <footer>
-      Stellar Build-A-Thon Chennai · <a href="https://github.com/vaduvanathan/stellar-hackathon">GitHub</a>
+      <p style="margin: 0 0 0.5rem 0;">Stellar Build-A-Thon Chennai · <a href="https://github.com/vaduvanathan/stellar-hackathon">GitHub</a></p>
+      <p id="contract-address-line" class="contract-line" style="display: none;">Soroban contract: <code id="contract-address"></code></p>
     </footer>
   </div>
 
@@ -144,6 +191,18 @@
         msg.className = 'msg err';
       }
     });
+
+    (async function showContractIfSet() {
+      try {
+        const r = await fetch('/api/lock-config');
+        const d = await r.json().catch(() => ({}));
+        const id = (d && d.contract_id) ? d.contract_id.trim() : '';
+        if (id) {
+          document.getElementById('contract-address').textContent = id;
+          document.getElementById('contract-address-line').style.display = 'block';
+        }
+      } catch (_) {}
+    })();
   </script>
 </body>
 </html>

@@ -149,12 +149,12 @@
       </div>
       <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text);"><strong>Add this key as a signer</strong></p>
       <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--muted);">Use <strong>Set Options</strong>: signer = the key above, weight = 1. You can build the transaction in Stellar Lab or sign it here with Freighter.</p>
-      <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--warn);">Click <strong>Connect wallet</strong> first — a Freighter popup may open; click <strong>Allow</strong> in the popup. Then click <strong>Build &amp; sign here</strong>.</p>
+      <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--warn);">Click <strong>Build &amp; sign here</strong> first. If Freighter says not connected, click <strong>Connect wallet</strong> and <strong>Allow</strong> in the popup, then try again. Or use Stellar Lab to build manually.</p>
       <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-        <button type="button" id="connect-wallet-btn" class="primary" style="background: var(--accent-dim); color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Connect wallet (Freighter)</button>
+        <button type="button" id="add-signer-btn" class="primary" style="background: var(--accent-dim); color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Build &amp; sign here (Freighter)</button>
+        <button type="button" id="connect-wallet-btn" class="secondary" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Connect wallet (Freighter)</button>
         <span id="connect-status" style="font-size: 0.9rem; color: var(--muted);"></span>
         <a id="open-lab-btn" href="https://lab.stellar.org/transaction/build" target="_blank" rel="noopener" class="secondary" style="display: inline-block; background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; text-decoration: none; font-size: 0.95rem; font-weight: 600;">Open Stellar Lab → Build transaction</a>
-        <button type="button" id="add-signer-btn" class="secondary" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Build & sign here (Freighter)</button>
       </div>
       <div id="add-signer-msg" class="msg" style="margin-top: 0.5rem;"></div>
     </section>
