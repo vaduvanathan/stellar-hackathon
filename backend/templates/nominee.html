@@ -202,6 +202,42 @@
       }
     });
 
+    function waitForStellarSdk(maxMs) {
+      return new Promise(function (resolve) {
+        if (window.StellarSdk && window.StellarSdk.Server) {
+          resolve(window.StellarSdk);
+          return;
+        }
+        var start = Date.now();
+        var t = setInterval(function () {
+          if (window.StellarSdk && window.StellarSdk.Server) {
+            clearInterval(t);
+            resolve(window.StellarSdk);
+            return;
+          }
+          if (Date.now() - start >= (maxMs || 5000)) {
+            clearInterval(t);
+            resolve(null);
+          }
+        }, 100);
+      });
+    }
+
+    function loadStellarSdkScript() {
+      return new Promise(function (resolve, reject) {
+        if (document.querySelector('script[src*="stellar-sdk"]')) {
+          resolve();
+          return;
+        }
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/stellar-sdk@11.2.0/dist/stellar-sdk.min.js';
+        s.crossOrigin = 'anonymous';
+        s.onload = resolve;
+        s.onerror = function () { reject(new Error('Failed to load Stellar SDK')); };
+        document.head.appendChild(s);
+      });
+    }
+
     document.getElementById('add-signer-btn').addEventListener('click', async function () {
       const msgEl = document.getElementById('add-signer-msg');
       const accountPublicKey = document.getElementById('nominee_depositor').value.trim();
@@ -211,15 +247,24 @@
         msgEl.className = 'msg err';
         return;
       }
-      msgEl.textContent = 'Building transaction…';
+      msgEl.textContent = 'Loading…';
       msgEl.className = 'msg loading';
       try {
-        const StellarSdk = window.StellarSdk;
+        var StellarSdk = await waitForStellarSdk(6000);
         if (!StellarSdk || !StellarSdk.Server) {
-          msgEl.textContent = 'Stellar SDK not loaded. Refresh the page.';
+          msgEl.textContent = 'Loading Stellar SDK…';
+          try {
+            await loadStellarSdkScript();
+            StellarSdk = await waitForStellarSdk(5000);
+          } catch (_) {}
+        }
+        if (!StellarSdk || !StellarSdk.Server) {
+          msgEl.textContent = 'Stellar SDK did not load. Check your connection, disable ad blockers for this site, then refresh the page.';
           msgEl.className = 'msg err';
           return;
         }
+        msgEl.textContent = 'Building transaction…';
+        msgEl.className = 'msg loading';
         let networkPassphrase = 'Test SDF Network ; September 2015';
         let horizonUrl = 'https://horizon-testnet.stellar.org';
         try {
