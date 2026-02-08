@@ -3,22 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>SUPERNOVA</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23238636' width='32' height='32' rx='6'/><path fill='%23fff' d='M16 6l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z'/></svg>" type="image/svg+xml">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23060b18' width='32' height='32' rx='6'/><path fill='%2322d3ee' d='M16 6l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z'/></svg>" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #060b18;
+      --bg: #030712;
       --bg2: #0a1128;
-      --surface: rgba(15, 25, 60, 0.7);
-      --border: rgba(100, 160, 255, 0.15);
-      --border-glow: rgba(100, 160, 255, 0.3);
+      --surface: rgba(10, 17, 40, 0.75);
+      --border: rgba(100, 160, 255, 0.12);
+      --border-glow: rgba(100, 160, 255, 0.25);
       --text: #e8edf5;
       --muted: #7b8ba8;
       --accent: #22d3ee;
       --accent2: #818cf8;
+      --accent3: #a855f7;
+      --magenta: #ec4899;
       --accent-dim: #0ea5c9;
       --warn: #fbbf24;
       --err: #f87171;
@@ -35,82 +38,153 @@
       overflow-x: hidden;
     }
 
-    /* ---- Navbar ---- */
+    /* ===== E7: Scroll Progress Bar ===== */
+    .scroll-progress {
+      position: fixed; top: 0; left: 0; z-index: 9999;
+      height: 3px; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--magenta), var(--accent));
+      background-size: 300% 100%;
+      animation: progress-shimmer 3s linear infinite;
+      box-shadow: 0 0 12px rgba(34,211,238,0.5), 0 0 30px rgba(129,140,248,0.3);
+      transition: width 0.1s linear;
+    }
+    @keyframes progress-shimmer {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+
+    /* ===== Canvas Starfield ===== */
+    #starfield {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
+    }
+
+    /* ===== Navbar ===== */
     .navbar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      position: fixed; top: 3px; left: 0; right: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
       padding: 1rem 2rem;
-      background: rgba(6, 11, 24, 0.85);
-      backdrop-filter: blur(12px);
+      background: rgba(3, 7, 18, 0.8);
+      backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
     }
     .navbar-brand {
-      display: flex; align-items: center; gap: 0.5rem;
-      font-weight: 800; font-size: 1.1rem; color: var(--text);
-      text-decoration: none; letter-spacing: -0.01em;
+      display: flex; align-items: center; gap: 0.6rem;
+      font-weight: 900; font-size: 1.15rem; color: var(--text);
+      text-decoration: none; letter-spacing: 0.04em;
     }
-    .navbar-brand svg { width: 28px; height: 28px; }
+    .navbar-brand svg { width: 30px; height: 30px; }
     .navbar-links { display: flex; gap: 1.5rem; align-items: center; }
-    .navbar-links a {
-      color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 500;
-      transition: color 0.2s;
-    }
-    .navbar-links a:hover { color: var(--accent); }
 
-    /* ---- Hero ---- */
+    /* ===== Hero ===== */
     .hero {
       position: relative;
       min-height: 100vh;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       text-align: center;
-      padding: 6rem 1.5rem 4rem;
-      background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(34, 211, 238, 0.08) 0%, transparent 70%),
-                  radial-gradient(ellipse 60% 50% at 50% 50%, rgba(129, 140, 248, 0.06) 0%, transparent 70%),
-                  var(--bg);
+      padding: 7rem 1.5rem 4rem;
+      z-index: 1;
       overflow: hidden;
     }
-    .hero::before {
-      content: '';
-      position: absolute; inset: 0;
-      background-image:
-        radial-gradient(1.5px 1.5px at 10% 20%, rgba(100,160,255,0.4) 50%, transparent 50%),
-        radial-gradient(1px 1px at 30% 60%, rgba(100,160,255,0.25) 50%, transparent 50%),
-        radial-gradient(1.5px 1.5px at 50% 10%, rgba(100,160,255,0.35) 50%, transparent 50%),
-        radial-gradient(1px 1px at 70% 80%, rgba(100,160,255,0.2) 50%, transparent 50%),
-        radial-gradient(1.5px 1.5px at 90% 30%, rgba(100,160,255,0.3) 50%, transparent 50%),
-        radial-gradient(1px 1px at 15% 85%, rgba(100,160,255,0.25) 50%, transparent 50%),
-        radial-gradient(1.5px 1.5px at 80% 50%, rgba(100,160,255,0.3) 50%, transparent 50%),
-        radial-gradient(1px 1px at 45% 40%, rgba(100,160,255,0.2) 50%, transparent 50%),
-        radial-gradient(1px 1px at 60% 25%, rgba(100,160,255,0.3) 50%, transparent 50%),
-        radial-gradient(1.5px 1.5px at 25% 45%, rgba(100,160,255,0.25) 50%, transparent 50%);
-      animation: drift 20s ease-in-out infinite alternate;
+
+    /* E3: Giant outlined background text */
+    .hero-bg-text {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: clamp(6rem, 18vw, 16rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(34, 211, 238, 0.08);
       pointer-events: none;
+      z-index: 0;
+      user-select: none;
+      animation: bg-text-pulse 6s ease-in-out infinite alternate;
     }
-    @keyframes drift {
-      from { transform: translateY(0) translateX(0); }
-      to { transform: translateY(-15px) translateX(10px); }
+    @keyframes bg-text-pulse {
+      0% { -webkit-text-stroke-color: rgba(34, 211, 238, 0.06); }
+      50% { -webkit-text-stroke-color: rgba(129, 140, 248, 0.1); }
+      100% { -webkit-text-stroke-color: rgba(168, 85, 247, 0.08); }
     }
 
-    /* ---- 3D Stellar Logo ---- */
+    /* E2: Black Hole Vortex */
     .logo-scene {
-      width: 180px; height: 180px;
+      width: 200px; height: 200px;
       perspective: 600px;
       margin-bottom: 2.5rem;
       position: relative;
+      z-index: 2;
     }
-    .logo-scene::after {
-      content: '';
+    .vortex {
       position: absolute;
-      bottom: -20px; left: 50%; transform: translateX(-50%);
-      width: 120px; height: 30px;
-      background: radial-gradient(ellipse, rgba(34,211,238,0.25) 0%, transparent 70%);
-      filter: blur(8px);
-      animation: glow-pulse 3s ease-in-out infinite alternate;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 320px; height: 320px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
     }
-    @keyframes glow-pulse {
-      from { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
-      to { opacity: 1; transform: translateX(-50%) scale(1.1); }
+    .vortex-ring {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      border: 1px solid transparent;
+      animation: vortex-spin linear infinite;
     }
+    .vortex-ring:nth-child(1) {
+      inset: 0;
+      border-color: rgba(34, 211, 238, 0.15);
+      animation-duration: 8s;
+      filter: blur(1px);
+    }
+    .vortex-ring:nth-child(2) {
+      inset: 15px;
+      border-color: rgba(129, 140, 248, 0.2);
+      animation-duration: 6s;
+      animation-direction: reverse;
+    }
+    .vortex-ring:nth-child(3) {
+      inset: 30px;
+      border-color: rgba(168, 85, 247, 0.25);
+      animation-duration: 4s;
+      filter: blur(0.5px);
+    }
+    .vortex-ring:nth-child(4) {
+      inset: 50px;
+      border-color: rgba(236, 72, 153, 0.2);
+      animation-duration: 3s;
+      animation-direction: reverse;
+    }
+    .vortex-ring:nth-child(5) {
+      inset: 70px;
+      border-color: rgba(34, 211, 238, 0.3);
+      animation-duration: 2.5s;
+    }
+    @keyframes vortex-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .vortex-glow {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(34, 211, 238, 0.12) 0%,
+        rgba(129, 140, 248, 0.08) 30%,
+        rgba(168, 85, 247, 0.05) 50%,
+        transparent 70%
+      );
+      filter: blur(20px);
+      animation: vortex-glow-pulse 4s ease-in-out infinite alternate;
+    }
+    @keyframes vortex-glow-pulse {
+      0% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.8); }
+      100% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    }
+
     .logo-cube {
       width: 100%; height: 100%;
       transform-style: preserve-3d;
@@ -129,58 +203,163 @@
       backface-visibility: visible;
     }
     .logo-face svg {
-      width: 140px; height: 140px;
-      filter: drop-shadow(0 0 30px rgba(34,211,238,0.35)) drop-shadow(0 0 60px rgba(129,140,248,0.2));
+      width: 150px; height: 150px;
+      filter: drop-shadow(0 0 30px rgba(34,211,238,0.4)) drop-shadow(0 0 60px rgba(129,140,248,0.25));
     }
 
     .hero h1 {
-      font-size: clamp(2.5rem, 6vw, 4rem);
-      font-weight: 900; letter-spacing: -0.03em; line-height: 1.1;
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 900; letter-spacing: 0.06em; line-height: 1.05;
       margin-bottom: 1.25rem;
-      background: linear-gradient(135deg, #e8edf5 0%, #22d3ee 50%, #818cf8 100%);
+      background: linear-gradient(135deg, #e8edf5 0%, #22d3ee 40%, #818cf8 70%, #a855f7 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
+      position: relative; z-index: 2;
     }
     .hero-tagline {
-      font-size: clamp(1rem, 2vw, 1.2rem);
-      color: var(--muted); max-width: 540px; margin: 0 auto 2.5rem;
-      line-height: 1.6;
+      font-size: clamp(1rem, 2.2vw, 1.25rem);
+      color: var(--muted); max-width: 580px; margin: 0 auto 2.5rem;
+      line-height: 1.7;
+      position: relative; z-index: 2;
+    }
+
+    /* E9: Supernova Burst on CTA hover */
+    .hero-cta-wrap {
+      position: relative;
+      display: inline-block;
+      z-index: 2;
     }
     .hero-cta {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.85rem 2rem;
+      display: inline-flex; align-items: center; gap: 0.6rem;
+      padding: 0.9rem 2.2rem;
       border: 2px solid var(--border-glow);
       border-radius: 50px;
-      color: var(--text); font-weight: 700; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text); font-weight: 700; font-size: 1rem;
+      text-transform: uppercase; letter-spacing: 0.1em;
       text-decoration: none;
       transition: all 0.3s;
       background: transparent;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-cta::before {
+      content: '';
+      position: absolute; inset: -2px;
+      border-radius: 50px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+      opacity: 0;
+      z-index: -1;
+      transition: opacity 0.3s;
     }
     .hero-cta:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      box-shadow: 0 0 20px rgba(34,211,238,0.2), inset 0 0 20px rgba(34,211,238,0.05);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 0 30px rgba(34,211,238,0.3), 0 0 60px rgba(129,140,248,0.2);
     }
+    .hero-cta:hover::before { opacity: 1; }
     .hero-cta svg { width: 18px; height: 18px; }
+    /* Burst particles container */
+    .cta-burst {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 0; height: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .cta-burst .particle {
+      position: absolute;
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0;
+    }
 
-    /* ---- Sections ---- */
-    .content { max-width: 760px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+    /* ===== E5: Cosmic Marquee ===== */
+    .cosmic-marquee {
+      overflow: hidden;
+      white-space: nowrap;
+      padding: 1.5rem 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      z-index: 1;
+      background: rgba(3, 7, 18, 0.6);
+    }
+    .marquee-track {
+      display: inline-flex;
+      animation: marquee-scroll 25s linear infinite;
+    }
+    .marquee-track span {
+      font-size: clamp(1.2rem, 3vw, 2rem);
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0 2rem;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(34, 211, 238, 0.35);
+    }
+    .marquee-track span.filled {
+      -webkit-text-stroke: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; background-clip: text;
+      color: transparent;
+    }
+    @keyframes marquee-scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* ===== E6: Nebula Sections ===== */
+    .content {
+      max-width: 760px; margin: 0 auto; padding: 4rem 1.5rem;
+      position: relative; z-index: 1;
+    }
+
+    /* E4: Scroll-Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px) scale(0.97);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
 
     .section-card {
       position: relative;
-      background: var(--surface);
-      border-radius: 16px;
-      padding: 2rem 2rem;
-      margin-bottom: 2rem;
-      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 2.25rem 2rem;
+      margin-bottom: 2.5rem;
+      backdrop-filter: blur(12px);
       overflow: hidden;
+    }
+    /* E6: Nebula gradient variant 1 */
+    .section-card.nebula-1 {
+      background: linear-gradient(135deg,
+        rgba(10, 17, 40, 0.85),
+        rgba(34, 211, 238, 0.04),
+        rgba(129, 140, 248, 0.06),
+        rgba(10, 17, 40, 0.85)
+      );
+    }
+    .section-card.nebula-2 {
+      background: linear-gradient(135deg,
+        rgba(10, 17, 40, 0.85),
+        rgba(168, 85, 247, 0.06),
+        rgba(236, 72, 153, 0.04),
+        rgba(10, 17, 40, 0.85)
+      );
     }
     .section-card::before {
       content: '';
       position: absolute; inset: 0;
-      border-radius: 16px;
+      border-radius: 20px;
       padding: 1px;
-      background: linear-gradient(135deg, rgba(34,211,238,0.3), rgba(129,140,248,0.15), rgba(34,211,238,0.1));
+      background: linear-gradient(135deg,
+        rgba(34,211,238,0.25), rgba(129,140,248,0.15),
+        rgba(168,85,247,0.1), rgba(34,211,238,0.05));
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
@@ -188,8 +367,10 @@
     }
     .section-card h2 {
       font-size: 0.8rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.12em;
-      color: var(--accent); margin-bottom: 1rem;
+      text-transform: uppercase; letter-spacing: 0.14em;
+      margin-bottom: 1rem;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
     .section-card p { color: var(--muted); font-size: 0.95rem; line-height: 1.7; margin-bottom: 1rem; }
     .section-card p:last-child { margin-bottom: 0; }
@@ -205,17 +386,17 @@
     a.btn-primary {
       display: inline-flex; align-items: center; gap: 0.5rem;
       padding: 0.7rem 1.5rem;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #060b18; font-weight: 700; font-size: 0.95rem; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+      color: #060b18; font-weight: 700; font-size: 0.95rem; border-radius: 12px;
       text-decoration: none;
       transition: all 0.3s;
-      box-shadow: 0 4px 20px rgba(34,211,238,0.25);
+      box-shadow: 0 4px 20px rgba(34,211,238,0.2);
     }
-    a.btn-primary:hover { box-shadow: 0 6px 30px rgba(34,211,238,0.4); transform: translateY(-1px); }
+    a.btn-primary:hover { box-shadow: 0 6px 35px rgba(34,211,238,0.4), 0 0 20px rgba(129,140,248,0.3); transform: translateY(-2px); }
 
     button {
       font-family: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer;
-      padding: 0.6rem 1.2rem; border-radius: 10px; border: none;
+      padding: 0.6rem 1.2rem; border-radius: 12px; border: none;
       background: var(--accent); color: #060b18;
       transition: all 0.2s;
     }
@@ -266,6 +447,7 @@
       text-align: center; padding: 3rem 1.5rem;
       border-top: 1px solid var(--border);
       color: var(--muted); font-size: 0.85rem;
+      position: relative; z-index: 1;
     }
     .site-footer a { color: var(--accent); text-decoration: none; }
     .site-footer a:hover { text-decoration: underline; }
@@ -299,13 +481,12 @@
         transform: rotate(0deg) scale(0.7);
       }
       100% {
-        bottom: calc(100vh - 80px);
-        left: calc(100vw - 80px);
+        bottom: calc(100vh - 90px);
+        left: calc(100vw - 140px);
         opacity: 1;
         transform: rotate(0deg) scale(0.45);
       }
     }
-    /* Trail behind the kite */
     .risein-kite::after {
       content: '';
       position: absolute;
@@ -314,7 +495,7 @@
       border-radius: 50%;
       background: radial-gradient(circle, rgba(65,218,190,0.35), rgba(180,255,36,0.15), transparent 70%);
       filter: blur(10px);
-      animation: trail-glow 2.2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+      animation: trail-glow 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
     }
     @keyframes trail-glow {
       0% { opacity: 0; transform: scale(0.5); }
@@ -322,7 +503,6 @@
       100% { opacity: 0; transform: scale(2); }
     }
 
-    /* Sparkle star that appears at top-right after kite arrives */
     .risein-star {
       position: fixed;
       top: 22px; right: 90px;
@@ -341,7 +521,6 @@
       to { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 18px rgba(34,211,238,0.8)); }
     }
 
-    /* Rise In badge in footer */
     .risein-footer {
       display: inline-flex; align-items: center; gap: 0.5rem;
       margin-top: 0.75rem;
@@ -349,37 +528,58 @@
     .risein-footer svg { width: 32px; height: 32px; }
     .risein-footer span { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
 
+    /* E8: Mouse Cosmic Trail */
+    .cursor-particle {
+      position: fixed;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      opacity: 0;
+      animation: particle-fade 0.8s ease-out forwards;
+    }
+    @keyframes particle-fade {
+      0% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0); }
+    }
+
     /* ---- Responsive ---- */
     @media (max-width: 600px) {
       .navbar { padding: 0.75rem 1rem; }
       .hero { padding: 5rem 1rem 3rem; }
-      .logo-scene { width: 130px; height: 130px; }
-      .logo-face svg { width: 100px; height: 100px; }
-      .content { padding: 0 1rem 3rem; }
+      .logo-scene { width: 140px; height: 140px; }
+      .vortex { width: 240px; height: 240px; }
+      .logo-face svg { width: 110px; height: 110px; }
+      .content { padding: 2rem 1rem 3rem; }
       .section-card { padding: 1.5rem; }
       .risein-kite { width: 80px; height: 80px; }
       .risein-star { top: 18px; right: 60px; width: 36px; height: 36px; }
+      .hero-bg-text { font-size: 4rem; }
+      .cosmic-marquee { padding: 1rem 0; }
     }
   </style>
 </head>
 <body>
 
+  <!-- E7: Scroll Progress Bar -->
+  <div class="scroll-progress" id="scroll-progress"></div>
+
+  <!-- E1: Animated Canvas Starfield -->
+  <canvas id="starfield"></canvas>
+
   <!-- Rise In kite: flies from bottom-left to top-right on load -->
   <div class="risein-kite" aria-hidden="true">
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <!-- Left teal triangle -->
       <polygon points="5,45 30,18 30,45" fill="#41DABE"/>
-      <!-- 2x2 colored squares -->
       <rect x="30" y="18" width="25" height="27" fill="#CC45FF"/>
       <rect x="55" y="18" width="25" height="27" fill="#8427FD"/>
       <rect x="30" y="45" width="25" height="27" fill="#B4FF24"/>
       <rect x="55" y="45" width="25" height="27" fill="#CC45FF"/>
-      <!-- Bottom-right teal triangle -->
       <polygon points="55,72 80,72 80,97" fill="#41DABE"/>
     </svg>
   </div>
 
-  <!-- Sparkle star stays at top-right after kite passes -->
+  <!-- Sparkle star -->
   <div class="risein-star" aria-hidden="true">
     <svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
       <path d="M15 2 L17 11 L26 13 L17 15 L15 24 L13 15 L4 13 L13 11 Z" fill="#22d3ee"/>
@@ -395,18 +595,26 @@
       </svg>
       SUPERNOVA
     </a>
-    <div class="navbar-links">
-      <a href="/nominee">Set up nominee</a>
-      <a href="https://github.com/vaduvanathan/stellar-hackathon" target="_blank">GitHub</a>
-    </div>
+    <div class="navbar-links"></div>
   </nav>
 
   <!-- Hero -->
   <section class="hero">
+    <!-- E3: Giant outlined background text -->
+    <div class="hero-bg-text" aria-hidden="true">SUPERNOVA</div>
+
+    <!-- E2: Black Hole Vortex around logo -->
     <div class="logo-scene" aria-hidden="true">
+      <div class="vortex">
+        <div class="vortex-ring"></div>
+        <div class="vortex-ring"></div>
+        <div class="vortex-ring"></div>
+        <div class="vortex-ring"></div>
+        <div class="vortex-ring"></div>
+        <div class="vortex-glow"></div>
+      </div>
       <div class="logo-cube">
         <div class="logo-face">
-          <!-- Official Stellar XLM logo (black) from cryptologos.cc -->
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 236.36 200">
             <path fill="#0a0a0a" d="M203,26.16l-28.46,14.5-137.43,70a82.49,82.49,0,0,1-.7-10.69A81.87,81.87,0,0,1,158.2,28.6l16.29-8.3,2.43-1.24A100,100,0,0,0,18.18,100q0,3.82.29,7.61a18.19,18.19,0,0,1-9.88,17.58L0,129.57V150l25.29-12.89,0,0,8.19-4.18,8.07-4.11v0L186.43,55l16.28-8.29,33.65-17.15V9.14Z"/>
             <path fill="#0a0a0a" d="M236.36,50,49.78,145,33.5,153.31,0,170.38v20.41l33.27-16.95,28.46-14.5L199.3,89.24A83.45,83.45,0,0,1,200,100,81.87,81.87,0,0,1,78.09,171.36l-1,.53-17.66,9A100,100,0,0,0,218.18,100c0-2.57-.1-5.14-.29-7.68a18.2,18.2,0,0,1,9.87-17.58l8.6-4.38Z"/>
@@ -414,18 +622,46 @@
         </div>
       </div>
     </div>
+
     <h1>SUPERNOVA</h1>
     <p class="hero-tagline">Death is inevitable. Lost crypto is not. Don't leave your family with private keys they can't use. We bridge the gap between your crypto wallet and their bank account, automatically.</p>
-    <a href="/nominee" class="hero-cta">
-      Get Started
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-    </a>
+
+    <!-- E9: CTA with burst wrapper -->
+    <div class="hero-cta-wrap">
+      <a href="/nominee" class="hero-cta" id="cta-btn">
+        Start the Journey
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      </a>
+      <div class="cta-burst" id="cta-burst"></div>
+    </div>
   </section>
+
+  <!-- E5: Cosmic Marquee -->
+  <div class="cosmic-marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span class="filled">SUPERNOVA</span>
+      <span>STARS</span>
+      <span class="filled">BLACK HOLES</span>
+      <span>GALAXIES</span>
+      <span class="filled">STELLAR</span>
+      <span>INHERITANCE</span>
+      <span class="filled">CRYPTO</span>
+      <span>COSMOS</span>
+      <span class="filled">SUPERNOVA</span>
+      <span>STARS</span>
+      <span class="filled">BLACK HOLES</span>
+      <span>GALAXIES</span>
+      <span class="filled">STELLAR</span>
+      <span>INHERITANCE</span>
+      <span class="filled">CRYPTO</span>
+      <span>COSMOS</span>
+    </div>
+  </div>
 
   <!-- Content sections -->
   <div class="content">
 
-    <section class="section-card" id="nominee-section">
+    <section class="section-card nebula-1 reveal" id="nominee-section">
       <h2>Set up nominee</h2>
       <p>Your funds <strong>stay in your Stellar account</strong> — nothing is locked in a contract. Create a <strong>secondary (sweep) key</strong>, add it as a co-signer, and register a nominee.</p>
       <p>After <strong>no activity</strong> for the set period, we send an <strong>SMS</strong> with a claim link. Your nominee answers a secret question and can sweep <strong>the full balance</strong> to their address.</p>
@@ -441,7 +677,7 @@
       </div>
     </section>
 
-    <section class="section-card" id="get-account">
+    <section class="section-card nebula-2 reveal" id="get-account">
       <h2>How to get a Stellar account</h2>
       <ol class="steps">
         <li>Open <a href="https://laboratory.stellar.org/#account-creator?network=test" target="_blank" rel="noopener">Stellar Laboratory – Account Creator</a> (Test network).</li>
@@ -455,7 +691,7 @@
   </div>
 
   <!-- Footer -->
-  <footer class="site-footer">
+  <footer class="site-footer reveal">
     <div style="margin-bottom: 1.25rem;">
       <img src="https://cryptologos.cc/logos/versions/stellar-xlm-logo-full.svg?v=040" alt="Stellar" style="height: 36px; filter: brightness(0) invert(1); opacity: 0.7;" />
     </div>
@@ -475,6 +711,170 @@
   </footer>
 
   <script>
+    /* ================================================================
+       E1: ANIMATED CANVAS STARFIELD WITH PARALLAX
+       ================================================================ */
+    (function() {
+      const canvas = document.getElementById('starfield');
+      const ctx = canvas.getContext('2d');
+      let W, H, stars = [];
+      const STAR_COUNT = 280;
+      const LAYERS = [
+        { speed: 0.02, sizeMin: 0.4, sizeMax: 1.2, alpha: 0.5 },
+        { speed: 0.05, sizeMin: 0.8, sizeMax: 2,   alpha: 0.7 },
+        { speed: 0.1,  sizeMin: 1.2, sizeMax: 3,   alpha: 0.9 }
+      ];
+      const COLORS = ['#22d3ee','#818cf8','#a855f7','#e8edf5','#ec4899','#e8edf5','#e8edf5'];
+
+      function resize() {
+        W = canvas.width = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+      }
+
+      function createStars() {
+        stars = [];
+        for (let i = 0; i < STAR_COUNT; i++) {
+          const layer = LAYERS[Math.floor(Math.random() * LAYERS.length)];
+          stars.push({
+            x: Math.random() * W,
+            y: Math.random() * H * 3,
+            size: layer.sizeMin + Math.random() * (layer.sizeMax - layer.sizeMin),
+            alpha: layer.alpha * (0.4 + Math.random() * 0.6),
+            speed: layer.speed,
+            twinkleSpeed: 0.005 + Math.random() * 0.02,
+            twinkleOffset: Math.random() * Math.PI * 2,
+            color: COLORS[Math.floor(Math.random() * COLORS.length)]
+          });
+        }
+      }
+
+      let scrollY = 0;
+      window.addEventListener('scroll', () => { scrollY = window.pageYOffset; }, { passive: true });
+
+      let time = 0;
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+        time += 1;
+        for (const s of stars) {
+          const yPos = (s.y - scrollY * s.speed) % (H * 3);
+          const screenY = yPos < 0 ? yPos + H * 3 : yPos;
+          if (screenY > H + 5) continue;
+          const twinkle = 0.4 + 0.6 * Math.abs(Math.sin(time * s.twinkleSpeed + s.twinkleOffset));
+          ctx.globalAlpha = s.alpha * twinkle;
+          ctx.fillStyle = s.color;
+          ctx.beginPath();
+          ctx.arc(s.x, screenY, s.size, 0, Math.PI * 2);
+          ctx.fill();
+          // Add glow for bigger stars
+          if (s.size > 1.8) {
+            ctx.globalAlpha = s.alpha * twinkle * 0.15;
+            ctx.beginPath();
+            ctx.arc(s.x, screenY, s.size * 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+        requestAnimationFrame(draw);
+      }
+
+      resize();
+      createStars();
+      draw();
+      window.addEventListener('resize', () => { resize(); createStars(); });
+    })();
+
+    /* ================================================================
+       E7: SCROLL PROGRESS BAR
+       ================================================================ */
+    (function() {
+      const bar = document.getElementById('scroll-progress');
+      window.addEventListener('scroll', () => {
+        const h = document.documentElement.scrollHeight - window.innerHeight;
+        bar.style.width = h > 0 ? (window.pageYOffset / h * 100) + '%' : '0%';
+      }, { passive: true });
+    })();
+
+    /* ================================================================
+       E4: SCROLL-REVEAL ANIMATIONS (IntersectionObserver)
+       ================================================================ */
+    (function() {
+      const els = document.querySelectorAll('.reveal');
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            obs.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      els.forEach(el => obs.observe(el));
+    })();
+
+    /* ================================================================
+       E8: MOUSE COSMIC TRAIL
+       ================================================================ */
+    (function() {
+      const colors = ['#22d3ee','#818cf8','#a855f7','#ec4899','#e8edf5'];
+      let throttle = 0;
+      document.addEventListener('mousemove', (e) => {
+        throttle++;
+        if (throttle % 3 !== 0) return;
+        const p = document.createElement('div');
+        p.className = 'cursor-particle';
+        const size = 3 + Math.random() * 5;
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        p.style.left = (e.clientX - size/2 + (Math.random()-0.5)*12) + 'px';
+        p.style.top = (e.clientY - size/2 + (Math.random()-0.5)*12) + 'px';
+        p.style.background = colors[Math.floor(Math.random()*colors.length)];
+        p.style.boxShadow = '0 0 ' + (size*2) + 'px ' + p.style.background;
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 800);
+      });
+    })();
+
+    /* ================================================================
+       E9: SUPERNOVA BURST ON CTA HOVER
+       ================================================================ */
+    (function() {
+      const cta = document.getElementById('cta-btn');
+      const burst = document.getElementById('cta-burst');
+      const colors = ['#22d3ee','#818cf8','#a855f7','#ec4899','#fbbf24','#e8edf5'];
+      let hasBurst = false;
+
+      cta.addEventListener('mouseenter', () => {
+        if (hasBurst) return;
+        hasBurst = true;
+        for (let i = 0; i < 24; i++) {
+          const p = document.createElement('div');
+          p.className = 'particle';
+          const angle = (Math.PI * 2 / 24) * i + (Math.random() - 0.5) * 0.3;
+          const dist = 40 + Math.random() * 80;
+          const size = 2 + Math.random() * 4;
+          const color = colors[Math.floor(Math.random() * colors.length)];
+          p.style.width = size + 'px';
+          p.style.height = size + 'px';
+          p.style.background = color;
+          p.style.boxShadow = '0 0 ' + (size*3) + 'px ' + color;
+          p.style.opacity = '1';
+          p.style.transition = 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)';
+          p.style.transform = 'translate(-50%, -50%)';
+          burst.appendChild(p);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              p.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
+              p.style.opacity = '0';
+            });
+          });
+          setTimeout(() => p.remove(), 800);
+        }
+        setTimeout(() => { hasBurst = false; }, 900);
+      });
+    })();
+
+    /* ================================================================
+       EXISTING: Check nominees button
+       ================================================================ */
     const api = (path, opts = {}) => fetch(path, { headers: { 'Content-Type': 'application/json', ...opts.headers }, ...opts });
 
     document.getElementById('check-nominees-btn').addEventListener('click', async () => {
