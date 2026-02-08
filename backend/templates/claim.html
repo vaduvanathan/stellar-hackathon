@@ -3,111 +3,202 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Claim – SUPERNOVA</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23060b18' width='32' height='32' rx='6'/><path fill='%2322d3ee' d='M16 6l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z'/></svg>" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --accent: #3fb950;
-      --accent-dim: #238636;
-      --warn: #d29922;
-      --err: #f85149;
+      --bg: #030712;
+      --surface: rgba(10, 17, 40, 0.75);
+      --border: rgba(100, 160, 255, 0.12);
+      --border-glow: rgba(100, 160, 255, 0.25);
+      --text: #e8edf5;
+      --muted: #7b8ba8;
+      --accent: #22d3ee;
+      --accent2: #818cf8;
+      --accent3: #a855f7;
+      --magenta: #ec4899;
+      --accent-dim: #0ea5c9;
+      --warn: #fbbf24;
+      --err: #f87171;
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
     body {
-      margin: 0;
       min-height: 100vh;
       background: var(--bg);
       color: var(--text);
-      font-family: 'DM Sans', system-ui, sans-serif;
-      font-size: 15px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 16px;
       line-height: 1.6;
+      overflow-x: hidden;
     }
-    .wrap { max-width: 520px; margin: 0 auto; padding: 2rem 1rem; }
-    h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem 0; }
-    .tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .scroll-progress {
+      position: fixed; top: 0; left: 0; z-index: 9999;
+      height: 3px; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--magenta), var(--accent));
+      background-size: 300% 100%;
+      animation: progress-shimmer 3s linear infinite;
+      box-shadow: 0 0 12px rgba(34,211,238,0.5);
+      transition: width 0.1s linear;
+    }
+    @keyframes progress-shimmer { 0%{background-position:0% 50%} 100%{background-position:300% 50%} }
+    #starfield { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    .navbar {
+      position: fixed; top: 3px; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1.25rem;
+      background: rgba(3, 7, 18, 0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-brand {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-weight: 900; font-size: 1rem; color: var(--text);
+      text-decoration: none; letter-spacing: 0.04em;
+    }
+    .navbar-brand svg { width: 24px; height: 24px; }
+    .navbar-back {
+      color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 500;
+      transition: color 0.2s; display: flex; align-items: center; gap: 0.3rem;
+    }
+    .navbar-back:hover { color: var(--accent); }
+    .wrap { max-width: 600px; margin: 0 auto; padding: 5rem 1.25rem 2.5rem; position: relative; z-index: 1; }
+    .page-header { margin-bottom: 1.75rem; }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 5vw, 2rem); font-weight: 900;
+      background: linear-gradient(135deg, #e8edf5 0%, #22d3ee 50%, #818cf8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+    .page-header .tagline { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+    .reveal {
+      opacity: 0; transform: translateY(30px) scale(0.98);
+      transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0) scale(1); }
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.25rem 1.5rem;
-      margin-bottom: 1.25rem;
+      position: relative; border-radius: 20px; padding: 1.5rem;
+      margin-bottom: 1.5rem; backdrop-filter: blur(12px); overflow: hidden;
+      background: linear-gradient(135deg, rgba(10,17,40,0.85), rgba(34,211,238,0.04), rgba(129,140,248,0.06), rgba(10,17,40,0.85));
     }
-    .card h2 { font-size: 0.9rem; font-weight: 600; margin: 0 0 0.75rem 0; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    label { display: block; margin-bottom: 0.35rem; color: var(--muted); font-size: 0.85rem; }
+    .card::before {
+      content: ''; position: absolute; inset: 0; border-radius: 20px; padding: 1px;
+      background: linear-gradient(135deg, rgba(34,211,238,0.25), rgba(129,140,248,0.15), rgba(168,85,247,0.1), rgba(34,211,238,0.05));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+    }
+    .card h2 {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    label { display: block; margin-bottom: 0.4rem; color: var(--muted); font-size: 0.85rem; font-weight: 500; }
     input[type="text"], input[type="password"] {
-      width: 100%;
-      padding: 0.6rem 0.75rem;
-      margin-bottom: 0.9rem;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: inherit;
-      font-size: 0.95rem;
+      width: 100%; padding: 0.7rem 0.85rem; margin-bottom: 1rem;
+      background: rgba(3, 7, 18, 0.6); border: 1px solid var(--border); border-radius: 12px;
+      color: var(--text); font-family: inherit; font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    input:focus { outline: none; border-color: var(--accent); }
+    input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34,211,238,0.1); }
+    input[type="radio"] { accent-color: var(--accent); }
     button {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      padding: 0.6rem 1.1rem;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      padding: 0.7rem 1.3rem; border-radius: 12px; border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #060b18; box-shadow: 0 4px 20px rgba(34,211,238,0.2);
+      transition: all 0.2s; width: 100%;
     }
-    button:hover { background: var(--accent-dim); }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    button:hover { box-shadow: 0 6px 30px rgba(34,211,238,0.4); transform: translateY(-1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    code, .mono {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+      background: rgba(34,211,238,0.08); padding: 0.15em 0.4em; border-radius: 4px; word-break: break-all;
+    }
     .msg { margin-top: 0.75rem; font-size: 0.9rem; }
     .msg.ok { color: var(--accent); }
     .msg.err { color: var(--err); }
     .msg.loading { color: var(--muted); }
-    code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: rgba(255,255,255,0.06); padding: 0.15em 0.4em; border-radius: 4px; word-break: break-all; }
     .hidden { display: none; }
+    .radio-group label {
+      display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
+      padding: 0.5rem 0; font-size: 0.9rem; color: var(--text);
+    }
+    .site-footer {
+      margin-top: 2.5rem; text-align: center; color: var(--muted); font-size: 0.85rem; padding-bottom: 2rem;
+    }
+    .site-footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .site-footer a:hover { text-decoration: underline; }
+    .cursor-particle {
+      position: fixed; width: 6px; height: 6px; border-radius: 50%;
+      pointer-events: none; z-index: 9998; opacity: 0;
+      animation: particle-fade 0.8s ease-out forwards;
+    }
+    @keyframes particle-fade { 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(0)} }
+    @media (max-width: 768px) {
+      .wrap { padding: 4.5rem 1rem 2rem; }
+      .card { padding: 1.25rem; border-radius: 16px; }
+    }
+    @media (max-width: 400px) {
+      .wrap { padding: 4rem 0.75rem 1.5rem; }
+      .navbar { padding: 0.6rem 0.75rem; }
+      .card { padding: 1rem; }
+      input[type="text"], input[type="password"] { font-size: 16px; padding: 0.65rem 0.75rem; }
+      button { padding: 0.65rem 1rem; font-size: 0.9rem; }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/stellar-sdk@11.2.0/dist/stellar-sdk.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
-  <div class="wrap">
-    <h1>SUPERNOVA Claim</h1>
-    <p class="tagline">You’ve been named as a nominee. Answer the question to unlock and sweep funds to your Stellar address or bank account (mock).</p>
+  <div class="scroll-progress" id="scroll-progress"></div>
+  <canvas id="starfield"></canvas>
 
-    <div id="load-err" class="card hidden">
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 236.36 200">
+        <path fill="#22d3ee" d="M203,26.16l-28.46,14.5-137.43,70a82.49,82.49,0,0,1-.7-10.69A81.87,81.87,0,0,1,158.2,28.6l16.29-8.3,2.43-1.24A100,100,0,0,0,18.18,100q0,3.82.29,7.61a18.19,18.19,0,0,1-9.88,17.58L0,129.57V150l25.29-12.89,0,0,8.19-4.18,8.07-4.11v0L186.43,55l16.28-8.29,33.65-17.15V9.14Z"/>
+        <path fill="#22d3ee" d="M236.36,50,49.78,145,33.5,153.31,0,170.38v20.41l33.27-16.95,28.46-14.5L199.3,89.24A83.45,83.45,0,0,1,200,100,81.87,81.87,0,0,1,78.09,171.36l-1,.53-17.66,9A100,100,0,0,0,218.18,100c0-2.57-.1-5.14-.29-7.68a18.2,18.2,0,0,1,9.87-17.58l8.6-4.38Z"/>
+      </svg>
+      SUPERNOVA
+    </a>
+    <a href="/" class="navbar-back">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      Home
+    </a>
+  </nav>
+
+  <div class="wrap">
+    <div class="page-header reveal">
+      <h1>SUPERNOVA Claim</h1>
+      <p class="tagline">You've been named as a nominee. Answer the question to unlock and sweep funds to your Stellar address or bank account.</p>
+    </div>
+
+    <div id="load-err" class="card hidden reveal">
       <p class="msg err" id="load-err-text"></p>
     </div>
 
-    <div id="claim-card" class="card hidden">
+    <div id="claim-card" class="card hidden reveal">
       <h2>Question</h2>
-      <p id="question-text" style="margin: 0 0 1rem 0;"></p>
+      <p id="question-text" style="margin: 0 0 1rem 0; color: var(--text); font-weight: 600;"></p>
       <label for="answer">Your answer (unlocks the key only in this browser; we never see it)</label>
       <input type="password" id="answer" name="answer" placeholder="Enter the answer" autocomplete="off">
 
-      <p style="margin: 1rem 0 0.5rem 0; color: var(--muted); font-size: 0.9rem;">How do you want to receive the funds?</p>
-      <div style="margin-bottom: 0.75rem;">
-        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-          <input type="radio" name="receive_mode" value="stellar" checked>
-          <span>Receive in my Stellar wallet (G…)</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-          <input type="radio" name="receive_mode" value="bank">
-          <span>Receive in my bank account (mock – we mimic the step)</span>
-        </label>
+      <p style="margin: 0.5rem 0 0.5rem 0; color: var(--muted); font-size: 0.9rem;">How do you want to receive the funds?</p>
+      <div class="radio-group" style="margin-bottom: 0.75rem;">
+        <label><input type="radio" name="receive_mode" value="stellar" checked> Receive in my Stellar wallet (G…)</label>
+        <label><input type="radio" name="receive_mode" value="bank"> Receive in my bank account (mock)</label>
       </div>
 
       <div id="stellar-dest">
         <label for="beneficiary">Stellar address to receive funds (G…)</label>
         <input type="text" id="beneficiary" name="beneficiary" placeholder="G..." maxlength="56">
       </div>
-      <div id="bank-dest" class="hidden" style="margin-top: 0.75rem;">
-        <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--muted);">We sweep to the Stellar address above, then request a bank payout (mock – no real API yet).</p>
+      <div id="bank-dest" class="hidden" style="margin-top: 0.5rem;">
+        <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--muted);">We sweep to the Stellar address above, then request a bank payout (mock).</p>
         <label for="bank_holder">Account holder name</label>
         <input type="text" id="bank_holder" placeholder="Jane Doe">
         <label for="bank_account">Account number</label>
@@ -122,16 +213,35 @@
       <div id="claim-msg" class="msg"></div>
     </div>
 
-    <div id="loading" class="card">
+    <div id="loading" class="card reveal">
       <p class="msg loading">Loading claim data…</p>
     </div>
 
-    <footer style="margin-top:2rem;text-align:center;color:var(--muted);font-size:0.85rem;">
-      <a href="/" style="color:var(--accent);text-decoration:none;">← Back to SUPERNOVA</a>
+    <footer class="site-footer reveal">
+      <a href="/">← Back to SUPERNOVA</a>
     </footer>
   </div>
 
   <script>
+    /* Starfield */
+    (function(){
+      const c=document.getElementById('starfield'),x=c.getContext('2d');let W,H,stars=[];
+      const N=200,L=[{s:.02,mn:.4,mx:1.2,a:.5},{s:.05,mn:.8,mx:2,a:.7},{s:.1,mn:1.2,mx:3,a:.9}];
+      const C=['#22d3ee','#818cf8','#a855f7','#e8edf5','#ec4899','#e8edf5'];
+      function rs(){W=c.width=innerWidth;H=c.height=innerHeight}
+      function cs(){stars=[];for(let i=0;i<N;i++){const l=L[Math.random()*3|0];stars.push({x:Math.random()*W,y:Math.random()*H*3,sz:l.mn+Math.random()*(l.mx-l.mn),a:l.a*(0.4+Math.random()*0.6),sp:l.s,ts:0.005+Math.random()*0.02,to:Math.random()*Math.PI*2,c:C[Math.random()*C.length|0]})}}
+      let sY=0;addEventListener('scroll',()=>{sY=pageYOffset},{passive:true});
+      let t=0;function d(){x.clearRect(0,0,W,H);t++;for(const s of stars){const y=(s.y-sY*s.sp)%(H*3);const sy=y<0?y+H*3:y;if(sy>H+5)continue;const tw=0.4+0.6*Math.abs(Math.sin(t*s.ts+s.to));x.globalAlpha=s.a*tw;x.fillStyle=s.c;x.beginPath();x.arc(s.x,sy,s.sz,0,Math.PI*2);x.fill();if(s.sz>1.8){x.globalAlpha=s.a*tw*0.15;x.beginPath();x.arc(s.x,sy,s.sz*4,0,Math.PI*2);x.fill()}}x.globalAlpha=1;requestAnimationFrame(d)}
+      rs();cs();d();addEventListener('resize',()=>{rs();cs()});
+    })();
+    /* Scroll progress */
+    (function(){const b=document.getElementById('scroll-progress');addEventListener('scroll',()=>{const h=document.documentElement.scrollHeight-innerHeight;b.style.width=h>0?(pageYOffset/h*100)+'%':'0%'},{passive:true})})();
+    /* Scroll reveal */
+    (function(){const o=new IntersectionObserver(e=>{e.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');o.unobserve(e.target)}})},{threshold:0.1});document.querySelectorAll('.reveal').forEach(e=>o.observe(e))})();
+    /* Mouse trail */
+    (function(){const c=['#22d3ee','#818cf8','#a855f7','#ec4899','#e8edf5'];let th=0;document.addEventListener('mousemove',e=>{th++;if(th%3)return;const p=document.createElement('div');p.className='cursor-particle';const s=3+Math.random()*5;p.style.cssText=`width:${s}px;height:${s}px;left:${e.clientX-s/2+(Math.random()-.5)*12}px;top:${e.clientY-s/2+(Math.random()-.5)*12}px;background:${c[Math.random()*c.length|0]};box-shadow:0 0 ${s*2}px ${p.style.background}`;document.body.appendChild(p);setTimeout(()=>p.remove(),800)})})();
+
+    /* Claim logic */
     (function () {
       const claimToken = "{{ claim_token }}";
       if (!claimToken) {
@@ -141,9 +251,7 @@
         el.querySelector('#load-err-text').textContent = 'Invalid claim link.';
         return;
       }
-
       let claimData = null;
-
       async function loadClaimData() {
         const r = await fetch("/api/claim/data/" + encodeURIComponent(claimToken));
         const data = await r.json().catch(() => ({}));
@@ -159,218 +267,58 @@
         const benInput = document.getElementById('beneficiary');
         if (data.beneficiary_stellar_address) benInput.value = data.beneficiary_stellar_address;
         if (!data.account) {
-          const q = document.getElementById('question-text');
-          q.innerHTML = q.textContent + ' <span style="color:var(--warn);font-size:0.9rem;">(Depositor account not found on network.)</span>';
+          document.getElementById('question-text').innerHTML += ' <span style="color:var(--warn);font-size:0.9rem;">(Depositor account not found on network.)</span>';
           document.getElementById('claim-btn').disabled = true;
           document.getElementById('claim-msg').textContent = 'Cannot claim: depositor account not found on network.';
           document.getElementById('claim-msg').className = 'msg err';
         }
         document.querySelectorAll('input[name="receive_mode"]').forEach(function (radio) {
           radio.addEventListener('change', function () {
-            const bank = document.getElementById('bank-dest');
-            if (this.value === 'bank') {
-              bank.classList.remove('hidden');
-            } else {
-              bank.classList.add('hidden');
-            }
+            document.getElementById('bank-dest').classList.toggle('hidden', this.value !== 'bank');
           });
         });
       }
-
-      function str2ab(s) {
-        const buf = new ArrayBuffer(s.length);
-        const view = new Uint8Array(buf);
-        for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i);
-        return buf;
-      }
-      function b64decode(b64) {
-        const bin = atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
-        return str2ab(bin);
-      }
-
-      async function deriveKey(password, salt, iterations, keyLen) {
-        const enc = new TextEncoder();
-        const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
-        const derived = await crypto.subtle.deriveBits(
-          { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
-          key,
-          keyLen * 8
-        );
-        return crypto.subtle.importKey('raw', derived, { name: 'AES-GCM' }, false, ['decrypt']);
-      }
-
-      async function decryptSecret(ciphertextBuf, nonceBuf, key) {
-        const pt = await crypto.subtle.decrypt(
-          { name: 'AES-GCM', iv: nonceBuf },
-          key,
-          ciphertextBuf
-        );
-        return new TextDecoder().decode(pt);
-      }
-
-      async function unlockSecret(answer) {
-        const kdf = claimData.kdf;
-        const iterations = kdf.iterations || 100000;
-        const keyLen = kdf.keyLength || 32;
-        const salt = b64decode(claimData.salt_b64);
-        const nonce = b64decode(claimData.nonce_b64);
-        const ciphertext = b64decode(claimData.ciphertext_b64);
-        const key = await deriveKey(answer, salt, iterations, keyLen);
-        return await decryptSecret(ciphertext, nonce, key);
-      }
-
-      function parseStellarDecimal(str) {
-        const s = String(str).trim();
-        const idx = s.indexOf('.');
-        if (idx === -1) return { whole: s, frac: '0000000' };
-        return { whole: s.slice(0, idx) || '0', frac: (s.slice(idx + 1) + '0000000').slice(0, 7) };
-      }
-      function toStroops(whole, frac) {
-        const w = BigInt(whole);
-        const f = frac.padEnd(7, '0').slice(0, 7);
-        return w * 10000000n + BigInt(f);
-      }
-      function fromStroops(stroops) {
-        const s = stroops.toString().padStart(8, '0');
-        const frac = s.slice(-7);
-        const whole = s.slice(0, -7) || '0';
-        return whole + '.' + frac;
-      }
-
-      async function buildSweepTransaction(secretKey, beneficiaryAddress) {
-        const StellarSdk = window.StellarSdk;
-        const account = claimData.account;
-        if (!account || !account.balances || account.balances.length === 0) {
-          throw new Error('Account not found or has no balances to sweep.');
+      function str2ab(s){const b=new ArrayBuffer(s.length);const v=new Uint8Array(b);for(let i=0;i<s.length;i++)v[i]=s.charCodeAt(i);return b}
+      function b64decode(b64){return str2ab(atob(b64.replace(/-/g,'+').replace(/_/g,'/')))}
+      async function deriveKey(pw,salt,iter,kl){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);const d=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256'},k,kl*8);return crypto.subtle.importKey('raw',d,{name:'AES-GCM'},false,['decrypt'])}
+      async function decryptSecret(ct,nonce,key){return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:nonce},key,ct))}
+      async function unlockSecret(answer){const kdf=claimData.kdf;return await decryptSecret(b64decode(claimData.ciphertext_b64),b64decode(claimData.nonce_b64),await deriveKey(answer,b64decode(claimData.salt_b64),kdf.iterations||100000,kdf.keyLength||32))}
+      function parseStellarDecimal(s){s=String(s).trim();const i=s.indexOf('.');return i===-1?{whole:s,frac:'0000000'}:{whole:s.slice(0,i)||'0',frac:(s.slice(i+1)+'0000000').slice(0,7)}}
+      function toStroops(w,f){return BigInt(w)*10000000n+BigInt(f.padEnd(7,'0').slice(0,7))}
+      function fromStroops(s){const st=s.toString().padStart(8,'0');return(st.slice(0,-7)||'0')+'.'+st.slice(-7)}
+      async function buildSweepTransaction(secretKey,beneficiaryAddress){
+        const S=window.StellarSdk,a=claimData.account;
+        if(!a||!a.balances||!a.balances.length)throw new Error('Account not found or has no balances.');
+        const kp=S.Keypair.fromSecret(secretKey),sa=new S.Account(kp.publicKey(),a.sequence);
+        const fee=(typeof S.BASE_FEE!=='undefined')?S.BASE_FEE:100;
+        const b=new S.TransactionBuilder(sa,{fee:String(fee),networkPassphrase:claimData.network_passphrase});
+        let ops=0,xlmAmt='0';const reserve=(2+parseInt(a.subentry_count,10)||0)*5000000;
+        for(const bal of a.balances){
+          if(bal.asset_type==='native'){const{whole,frac}=parseStellarDecimal(bal.balance);const st=toStroops(whole,frac);if(st<=reserve)continue;xlmAmt=fromStroops(st-BigInt(reserve));b.addOperation(S.Operation.payment({destination:beneficiaryAddress,asset:S.Asset.native(),amount:xlmAmt}));ops++}
+          else{if(parseFloat(bal.balance)<=0)continue;b.addOperation(S.Operation.payment({destination:beneficiaryAddress,asset:new S.Asset(bal.asset_code,bal.asset_issuer),amount:String(bal.balance)}));ops++}
         }
-        const networkPassphrase = claimData.network_passphrase;
-        const BASE_RESERVE = 5000000;
-        const subentryCount = parseInt(account.subentry_count, 10) || 0;
-        const reserveStroops = (2 + subentryCount) * BASE_RESERVE;
-        const keypair = StellarSdk.Keypair.fromSecret(secretKey);
-        const sequence = account.sequence;
-        const sourceAccount = new StellarSdk.Account(keypair.publicKey(), sequence);
-        const fee = (typeof StellarSdk.BASE_FEE !== 'undefined') ? StellarSdk.BASE_FEE : 100;
-        const builder = new StellarSdk.TransactionBuilder(sourceAccount, {
-          fee: String(fee),
-          networkPassphrase: networkPassphrase,
-        });
-        let opCount = 0;
-        let nativeXlmAmount = '0';
-        for (const bal of account.balances) {
-          if (bal.asset_type === 'native') {
-            const { whole, frac } = parseStellarDecimal(bal.balance);
-            const stroops = toStroops(whole, frac);
-            if (stroops <= reserveStroops) continue;
-            const spendableStroops = stroops - BigInt(reserveStroops);
-            const amountStr = fromStroops(spendableStroops);
-            nativeXlmAmount = amountStr;
-            builder.addOperation(StellarSdk.Operation.payment({
-              destination: beneficiaryAddress,
-              asset: StellarSdk.Asset.native(),
-              amount: amountStr,
-            }));
-            opCount++;
-          } else {
-            const code = bal.asset_code;
-            const issuer = bal.asset_issuer;
-            const amountStr = String(bal.balance);
-            if (parseFloat(amountStr) <= 0) continue;
-            const asset = new StellarSdk.Asset(code, issuer);
-            builder.addOperation(StellarSdk.Operation.payment({
-              destination: beneficiaryAddress,
-              asset: asset,
-              amount: amountStr,
-            }));
-            opCount++;
-          }
-        }
-        if (opCount === 0) throw new Error('No spendable balance to sweep (native may be below reserve).');
-        const tx = builder.setTimeout(180).build();
-        tx.sign(keypair);
-        return { xdr: tx.toEnvelope().toXDR('base64'), nativeXlmAmount: nativeXlmAmount };
+        if(!ops)throw new Error('No spendable balance.');
+        const tx=b.setTimeout(180).build();tx.sign(kp);return{xdr:tx.toEnvelope().toXDR('base64'),nativeXlmAmount:xlmAmt}
       }
-
-      document.getElementById('claim-btn').addEventListener('click', async function () {
-        const msgEl = document.getElementById('claim-msg');
-        const answer = document.getElementById('answer').value.trim();
-        const receiveMode = document.querySelector('input[name="receive_mode"]:checked').value;
-        const beneficiary = document.getElementById('beneficiary').value.trim();
-        if (!answer) {
-          msgEl.textContent = 'Enter the answer.';
-          msgEl.className = 'msg err';
-          return;
-        }
-        if (!beneficiary || beneficiary.length !== 56 || !beneficiary.startsWith('G')) {
-          msgEl.textContent = 'Enter a valid Stellar address (G…, 56 characters). Funds will be swept to this address.';
-          msgEl.className = 'msg err';
-          return;
-        }
-        if (receiveMode === 'bank') {
-          const holder = document.getElementById('bank_holder').value.trim();
-          const acc = document.getElementById('bank_account').value.trim();
-          const ifsc = document.getElementById('bank_ifsc').value.trim();
-          if (!holder || !acc || !ifsc) {
-            msgEl.textContent = 'Fill account holder name, account number, and IFSC for bank payout.';
-            msgEl.className = 'msg err';
-            return;
-          }
-        }
-        msgEl.textContent = 'Unlocking…';
-        msgEl.className = 'msg loading';
-        document.getElementById('claim-btn').disabled = true;
-        try {
-          const secretKey = await unlockSecret(answer);
-          msgEl.textContent = 'Building sweep transaction…';
-          const result = await buildSweepTransaction(secretKey, beneficiary);
-          const signedXdr = result.xdr;
-          const nativeXlmAmount = result.nativeXlmAmount || '0';
-          msgEl.textContent = 'Submitting…';
-          const r = await fetch('/api/claim/submit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ signed_envelope_xdr: signedXdr }),
-          });
-          const data = await r.json().catch(() => ({}));
-          if (r.ok && data.status === 'success') {
-            if (receiveMode === 'bank') {
-              msgEl.textContent = 'Sweep done. Requesting bank payout (mock)…';
-              const offRes = await fetch('/api/claim/offramp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  claim_token: claimToken,
-                  bank_account_holder: document.getElementById('bank_holder').value.trim(),
-                  bank_account_number: document.getElementById('bank_account').value.trim(),
-                  bank_ifsc: document.getElementById('bank_ifsc').value.trim(),
-                  bank_name: document.getElementById('bank_name').value.trim(),
-                  amount_xlm: nativeXlmAmount,
-                }),
-              });
-              const offData = await offRes.json().catch(() => ({}));
-              if (offRes.ok && offData.status === 'success') {
-                const amt = offData.amount_inr_mock != null ? String(offData.amount_inr_mock) : '';
-                msgEl.textContent = 'Sweep successful. ' + (offData.message || '') + ' Order: ' + (offData.order_id || '') + '. Account: ' + (offData.bank_account_masked || '') + (amt ? ', ~₹' + amt + ' (mock).' : ' (mock).');
-                msgEl.className = 'msg ok';
-              } else {
-                msgEl.textContent = 'Sweep done. Bank payout error: ' + (offData.error || 'unknown');
-                msgEl.className = 'msg err';
-              }
-            } else {
-              msgEl.textContent = 'Success! Transaction hash: ' + (data.hash || 'submitted');
-              msgEl.className = 'msg ok';
-            }
-          } else {
-            msgEl.textContent = data.error || 'Submit failed';
-            msgEl.className = 'msg err';
-          }
-        } catch (e) {
-          msgEl.textContent = e.message || 'Error (wrong answer or no balance?)';
-          msgEl.className = 'msg err';
-        }
-        document.getElementById('claim-btn').disabled = false;
+      document.getElementById('claim-btn').addEventListener('click', async function(){
+        const msgEl=document.getElementById('claim-msg'),answer=document.getElementById('answer').value.trim();
+        const mode=document.querySelector('input[name="receive_mode"]:checked').value,ben=document.getElementById('beneficiary').value.trim();
+        if(!answer){msgEl.textContent='Enter the answer.';msgEl.className='msg err';return}
+        if(!ben||ben.length!==56||!ben.startsWith('G')){msgEl.textContent='Enter a valid Stellar address (G…, 56 chars).';msgEl.className='msg err';return}
+        if(mode==='bank'){const h=document.getElementById('bank_holder').value.trim(),ac=document.getElementById('bank_account').value.trim(),ifsc=document.getElementById('bank_ifsc').value.trim();if(!h||!ac||!ifsc){msgEl.textContent='Fill bank details.';msgEl.className='msg err';return}}
+        msgEl.textContent='Unlocking…';msgEl.className='msg loading';this.disabled=true;
+        try{
+          const sk=await unlockSecret(answer);msgEl.textContent='Building sweep transaction…';
+          const res=await buildSweepTransaction(sk,ben);msgEl.textContent='Submitting…';
+          const r=await fetch('/api/claim/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({signed_envelope_xdr:res.xdr})});
+          const d=await r.json().catch(()=>({}));
+          if(r.ok&&d.status==='success'){
+            if(mode==='bank'){msgEl.textContent='Sweep done. Requesting bank payout…';const or=await fetch('/api/claim/offramp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({claim_token:claimToken,bank_account_holder:document.getElementById('bank_holder').value.trim(),bank_account_number:document.getElementById('bank_account').value.trim(),bank_ifsc:document.getElementById('bank_ifsc').value.trim(),bank_name:document.getElementById('bank_name').value.trim(),amount_xlm:res.nativeXlmAmount})});const od=await or.json().catch(()=>({}));if(or.ok&&od.status==='success'){msgEl.textContent='Sweep successful. '+(od.message||'')+' Order: '+(od.order_id||'')+'. '+(od.amount_inr_mock!=null?'~₹'+od.amount_inr_mock+' (mock).':'');msgEl.className='msg ok'}else{msgEl.textContent='Sweep done. Bank payout error: '+(od.error||'unknown');msgEl.className='msg err'}}
+            else{msgEl.textContent='Success! Transaction hash: '+(d.hash||'submitted');msgEl.className='msg ok'}
+          }else{msgEl.textContent=d.error||'Submit failed';msgEl.className='msg err'}
+        }catch(e){msgEl.textContent=e.message||'Error (wrong answer or no balance?)';msgEl.className='msg err'}
+        this.disabled=false;
       });
-
       loadClaimData();
     })();
   </script>

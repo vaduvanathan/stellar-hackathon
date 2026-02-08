@@ -3,196 +3,535 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Create secondary key – SUPERNOVA</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23238636' width='32' height='32' rx='6'/><path fill='%23fff' d='M16 6l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z'/></svg>" type="image/svg+xml">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23060b18' width='32' height='32' rx='6'/><path fill='%2322d3ee' d='M16 6l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z'/></svg>" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #060b18;
+      --bg: #030712;
       --bg2: #0a1128;
-      --surface: rgba(15, 25, 60, 0.7);
-      --border: rgba(100, 160, 255, 0.15);
-      --border-glow: rgba(100, 160, 255, 0.3);
+      --surface: rgba(10, 17, 40, 0.75);
+      --border: rgba(100, 160, 255, 0.12);
+      --border-glow: rgba(100, 160, 255, 0.25);
       --text: #e8edf5;
       --muted: #7b8ba8;
       --accent: #22d3ee;
       --accent2: #818cf8;
+      --accent3: #a855f7;
+      --magenta: #ec4899;
       --accent-dim: #0ea5c9;
       --warn: #fbbf24;
       --err: #f87171;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
     body {
       min-height: 100vh;
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 15px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 16px;
       line-height: 1.6;
+      overflow-x: hidden;
     }
-    .wrap { max-width: 620px; margin: 0 auto; padding: 2.5rem 1.5rem; }
-    h1 {
-      font-size: 1.75rem; font-weight: 800; margin: 0 0 0.25rem 0;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #e8edf5, #22d3ee);
+
+    /* Scroll Progress */
+    .scroll-progress {
+      position: fixed; top: 0; left: 0; z-index: 9999;
+      height: 3px; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--magenta), var(--accent));
+      background-size: 300% 100%;
+      animation: progress-shimmer 3s linear infinite;
+      box-shadow: 0 0 12px rgba(34,211,238,0.5), 0 0 30px rgba(129,140,248,0.3);
+      transition: width 0.1s linear;
+    }
+    @keyframes progress-shimmer {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+
+    /* Canvas Starfield */
+    #starfield {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: fixed; top: 3px; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1.25rem;
+      background: rgba(3, 7, 18, 0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-brand {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-weight: 900; font-size: 1rem; color: var(--text);
+      text-decoration: none; letter-spacing: 0.04em;
+    }
+    .navbar-brand svg { width: 24px; height: 24px; }
+    .navbar-back {
+      color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 500;
+      transition: color 0.2s; display: flex; align-items: center; gap: 0.3rem;
+    }
+    .navbar-back:hover { color: var(--accent); }
+
+    /* Main wrap */
+    .wrap {
+      max-width: 640px; margin: 0 auto;
+      padding: 5rem 1.25rem 2.5rem;
+      position: relative; z-index: 1;
+    }
+
+    /* Page header */
+    .page-header {
+      margin-bottom: 1.75rem;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 5vw, 2rem); font-weight: 900;
+      letter-spacing: -0.01em;
+      background: linear-gradient(135deg, #e8edf5 0%, #22d3ee 50%, #818cf8 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 0.5rem;
     }
-    .tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .page-header .tagline {
+      color: var(--muted); font-size: 0.9rem; line-height: 1.6;
+    }
+    .page-header .tagline strong { color: var(--text); }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px) scale(0.98);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    /* Cards */
     .card {
       position: relative;
-      background: var(--surface);
-      border-radius: 16px;
-      padding: 1.5rem 1.75rem;
-      margin-bottom: 1.25rem;
-      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      backdrop-filter: blur(12px);
       overflow: hidden;
+    }
+    .card.nebula-1 {
+      background: linear-gradient(135deg, rgba(10,17,40,0.85), rgba(34,211,238,0.04), rgba(129,140,248,0.06), rgba(10,17,40,0.85));
+    }
+    .card.nebula-2 {
+      background: linear-gradient(135deg, rgba(10,17,40,0.85), rgba(168,85,247,0.06), rgba(236,72,153,0.04), rgba(10,17,40,0.85));
+    }
+    .card.nebula-3 {
+      background: linear-gradient(135deg, rgba(10,17,40,0.85), rgba(34,211,238,0.05), rgba(168,85,247,0.05), rgba(10,17,40,0.85));
     }
     .card::before {
       content: '';
       position: absolute; inset: 0;
-      border-radius: 16px;
+      border-radius: 20px;
       padding: 1px;
-      background: linear-gradient(135deg, rgba(34,211,238,0.3), rgba(129,140,248,0.15), rgba(34,211,238,0.1));
+      background: linear-gradient(135deg, rgba(34,211,238,0.25), rgba(129,140,248,0.15), rgba(168,85,247,0.1), rgba(34,211,238,0.05));
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
+      -webkit-mask-composite: xor; mask-composite: exclude;
       pointer-events: none;
     }
-    .card h2 { font-size: 0.8rem; font-weight: 700; margin: 0 0 0.75rem 0; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; }
-    code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: rgba(34,211,238,0.08); padding: 0.15em 0.4em; border-radius: 4px; word-break: break-all; }
-    label { display: block; margin-bottom: 0.35rem; color: var(--muted); font-size: 0.85rem; }
+    .card h2 {
+      font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.14em;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .card p { color: var(--muted); font-size: 0.9rem; line-height: 1.7; }
+    .card p strong { color: var(--text); }
+
+    /* Info box */
+    .info-box {
+      padding: 0.75rem 1rem;
+      background: rgba(34,211,238,0.05);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.88rem; color: var(--muted); line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+    .info-box strong { color: var(--text); }
+
+    /* Form elements */
+    code, .mono {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+      background: rgba(34,211,238,0.08); padding: 0.15em 0.4em; border-radius: 4px;
+      word-break: break-all;
+    }
+    label {
+      display: block; margin-bottom: 0.4rem;
+      color: var(--muted); font-size: 0.85rem; font-weight: 500;
+    }
     input[type="text"], input[type="password"], input[type="email"] {
       width: 100%;
-      padding: 0.6rem 0.75rem;
-      margin-bottom: 0.9rem;
-      background: rgba(6, 11, 24, 0.6);
+      padding: 0.7rem 0.85rem;
+      margin-bottom: 1rem;
+      background: rgba(3, 7, 18, 0.6);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
       color: var(--text);
       font-family: inherit;
       font-size: 0.95rem;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    input:focus { outline: none; border-color: var(--accent); }
-    select {
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(34,211,238,0.1);
+    }
+
+    /* Custom Select / Dropdown */
+    .select-wrap {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+    .select-wrap select {
       width: 100%;
-      padding: 0.6rem 0.75rem;
-      margin-bottom: 0.9rem;
-      background: rgba(6, 11, 24, 0.6);
+      padding: 0.7rem 2.5rem 0.7rem 0.85rem;
+      background: rgba(3, 7, 18, 0.6);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
       color: var(--text);
       font-family: inherit;
       font-size: 0.95rem;
-    }
-    button {
-      background: var(--accent);
-      color: #060b18;
-      border: none;
-      padding: 0.6rem 1.1rem;
-      border-radius: 10px;
-      font-family: inherit;
-      font-size: 0.95rem;
-      font-weight: 700;
+      font-weight: 500;
+      appearance: none;
+      -webkit-appearance: none;
       cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .select-wrap select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(34,211,238,0.1);
+    }
+    .select-wrap select option {
+      background: #0a1128;
+      color: var(--text);
+      padding: 0.5rem;
+    }
+    .select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 14px; top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid var(--accent);
+      pointer-events: none;
+    }
+
+    /* Buttons */
+    button, .btn {
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      padding: 0.7rem 1.3rem; border-radius: 12px; border: none;
       transition: all 0.2s;
     }
-    button:hover { background: var(--accent-dim); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    button.primary { background: var(--accent-dim); color: #fff; }
-    button.secondary {
-      background: transparent; color: var(--text);
-      border: 1px solid var(--border-glow);
+    .btn-primary-action {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #060b18;
+      box-shadow: 0 4px 20px rgba(34,211,238,0.2);
     }
-    button.secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary-action:hover {
+      box-shadow: 0 6px 30px rgba(34,211,238,0.4);
+      transform: translateY(-1px);
+    }
+    .btn-secondary-action {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border-glow) !important;
+    }
+    .btn-secondary-action:hover {
+      border-color: var(--accent) !important; color: var(--accent);
+    }
+    .btn-accent {
+      background: var(--accent-dim); color: #fff;
+    }
+    .btn-accent:hover { background: var(--accent); color: #060b18; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Messages */
     .msg { margin-top: 0.75rem; font-size: 0.9rem; padding: 0.5rem 0; }
     .msg.ok { color: var(--accent); }
     .msg.err { color: var(--err); }
     .msg.loading { color: var(--muted); }
+
+    /* Key box */
     .key-box {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: rgba(6, 11, 24, 0.5);
+      margin-top: 1rem; padding: 1rem;
+      background: rgba(3, 7, 18, 0.5);
       border: 1px solid var(--accent);
-      border-radius: 10px;
+      border-radius: 12px;
       word-break: break-all;
     }
     .key-box .label { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
-    footer { margin-top: 2rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
+
+    /* Button group */
+    .btn-group {
+      margin-top: 0.75rem;
+      display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;
+    }
+
+    /* Footer */
+    .site-footer {
+      margin-top: 2.5rem; text-align: center;
+      color: var(--muted); font-size: 0.85rem;
+      padding-bottom: 2rem;
+    }
+    .site-footer a {
+      color: var(--accent); text-decoration: none;
+      font-weight: 600; transition: color 0.2s;
+    }
+    .site-footer a:hover { text-decoration: underline; }
+
+    /* Mouse trail */
+    .cursor-particle {
+      position: fixed;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      opacity: 0;
+      animation: particle-fade 0.8s ease-out forwards;
+    }
+    @keyframes particle-fade {
+      0% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0); }
+    }
+
+    /* ---- Mobile Responsive ---- */
+    @media (max-width: 768px) {
+      .wrap { padding: 4.5rem 1rem 2rem; }
+      .card { padding: 1.25rem; border-radius: 16px; }
+      .btn-group { flex-direction: column; align-items: stretch; }
+      .btn-group button, .btn-group a { width: 100%; text-align: center; }
+      .page-header h1 { font-size: 1.4rem; }
+    }
+    @media (max-width: 400px) {
+      .wrap { padding: 4rem 0.75rem 1.5rem; }
+      .navbar { padding: 0.6rem 0.75rem; }
+      .navbar-brand { font-size: 0.9rem; }
+      .navbar-brand svg { width: 20px; height: 20px; }
+      .card { padding: 1rem; margin-bottom: 1.25rem; }
+      input[type="text"], input[type="password"], .select-wrap select {
+        font-size: 16px; /* prevents iOS zoom */
+        padding: 0.65rem 0.75rem;
+      }
+      button, .btn { padding: 0.65rem 1rem; font-size: 0.9rem; }
+      .page-header .tagline { font-size: 0.85rem; }
+    }
   </style>
   <script src="https://unpkg.com/@stellar/freighter-api@2.0.0/build/index.min.js" crossorigin="anonymous"></script>
-  <!-- Cache-bust so redeploys get latest -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
 </head>
 <body>
-  <div class="wrap">
-    <h1>Create secondary key</h1>
-    <p class="tagline">We generate a <strong>secondary (sweep) key</strong> for your account. You add it as a signer; when you’re inactive, your nominee can use it (with the secret answer) to claim funds. We never see the key—it’s encrypted with the answer.</p>
-    <p style="margin: 0 0 1.5rem 0; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; color: var(--muted);"><strong style="color: var(--text);">Where do I get the key?</strong> Right here. Fill the form below and click <strong>Create secondary key</strong>. Your secondary key (public key) will appear <strong>below the form</strong> on this page.</p>
 
-    <section class="card" style="margin-bottom: 1.5rem;">
-      <h2>Why add a “co-signer”?</h2>
-      <p style="margin: 0 0 0.5rem 0; color: var(--muted); font-size: 0.9rem;">When you create a Stellar wallet you get <strong>one keypair</strong> (one private key). That key alone can sign for your account. A <strong>co-signer</strong> is a second public key you add to the same account so that <strong>either</strong> your main key <strong>or</strong> this second key can sign. We generated that second keypair for you; we only show you its <strong>public</strong> key. You add it to your account by sending a Stellar transaction (Set Options → add signer) signed with your <strong>main</strong> key. After that, when you’re inactive, your nominee can use the second key (unlocked with the answer) to sweep funds.</p>
+  <!-- Scroll Progress -->
+  <div class="scroll-progress" id="scroll-progress"></div>
+
+  <!-- Canvas Starfield -->
+  <canvas id="starfield"></canvas>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 236.36 200">
+        <path fill="#22d3ee" d="M203,26.16l-28.46,14.5-137.43,70a82.49,82.49,0,0,1-.7-10.69A81.87,81.87,0,0,1,158.2,28.6l16.29-8.3,2.43-1.24A100,100,0,0,0,18.18,100q0,3.82.29,7.61a18.19,18.19,0,0,1-9.88,17.58L0,129.57V150l25.29-12.89,0,0,8.19-4.18,8.07-4.11v0L186.43,55l16.28-8.29,33.65-17.15V9.14Z"/>
+        <path fill="#22d3ee" d="M236.36,50,49.78,145,33.5,153.31,0,170.38v20.41l33.27-16.95,28.46-14.5L199.3,89.24A83.45,83.45,0,0,1,200,100,81.87,81.87,0,0,1,78.09,171.36l-1,.53-17.66,9A100,100,0,0,0,218.18,100c0-2.57-.1-5.14-.29-7.68a18.2,18.2,0,0,1,9.87-17.58l8.6-4.38Z"/>
+      </svg>
+      SUPERNOVA
+    </a>
+    <a href="/" class="navbar-back">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      Home
+    </a>
+  </nav>
+
+  <div class="wrap">
+
+    <div class="page-header reveal">
+      <h1>Create secondary key</h1>
+      <p class="tagline">We generate a <strong>secondary (sweep) key</strong> for your account. You add it as a signer; when you're inactive, your nominee can use it (with the secret answer) to claim funds. We <strong>never see the key</strong> — it's encrypted with the answer.</p>
+    </div>
+
+    <div class="info-box reveal">
+      <strong>Where do I get the key?</strong> Fill the form below and click <strong>Create secondary key</strong>. Your secondary key (public key) will appear below the form on this page.
+    </div>
+
+    <section class="card nebula-2 reveal">
+      <h2>Why add a "co-signer"?</h2>
+      <p style="margin: 0; font-size: 0.88rem;">When you create a Stellar wallet you get <strong>one keypair</strong> (one private key). A <strong>co-signer</strong> is a second public key you add to the same account so that <strong>either</strong> your main key <strong>or</strong> this second key can sign. We generated that second keypair for you. When your account is inactive, your nominee can use the second key (unlocked with the answer) to sweep funds.</p>
     </section>
 
-    <section class="card">
-      <h2>Step 1: Fill the form</h2>
-      <p style="margin: 0 0 1rem 0; color: var(--muted); font-size: 0.9rem;">We’ll create a keypair, encrypt the secret with your answer, and show you the <strong>public key</strong> in Step 2 below. Add that public key as a <strong>signer</strong> to your Stellar account (e.g. in Stellar Laboratory or Freighter).</p>
+    <section class="card nebula-1 reveal">
+      <h2>Step 1 — Fill the form</h2>
+      <p style="margin: 0 0 1.25rem 0; font-size: 0.88rem;">We'll create a keypair, encrypt the secret with your answer, and show you the <strong>public key</strong> in Step 2 below.</p>
       <form id="nominee-form">
         <label for="nominee_depositor">Your Stellar account (G…)</label>
-        <input type="text" id="nominee_depositor" placeholder="G..." maxlength="56" required>
+        <input type="text" id="nominee_depositor" placeholder="G..." maxlength="56" required autocomplete="off">
+
         <label for="nominee_phone">Nominee phone (E.164, e.g. +919876543210)</label>
-        <input type="text" id="nominee_phone" placeholder="+1234567890" required>
+        <input type="text" id="nominee_phone" placeholder="+1234567890" required autocomplete="tel">
+
         <label for="nominee_beneficiary">Nominee Stellar address (G…, where to send funds on claim)</label>
-        <input type="text" id="nominee_beneficiary" placeholder="G... (optional at register)">
+        <input type="text" id="nominee_beneficiary" placeholder="G... (optional at register)" autocomplete="off">
+
         <label for="nominee_question">Question (only the nominee should know the answer)</label>
-        <input type="text" id="nominee_question" placeholder="e.g. What was the name of your first pet?">
-        <label for="nominee_answer">Answer (secret – we never store it; used to encrypt the key)</label>
-        <input type="password" id="nominee_answer" placeholder="Answer" autocomplete="off">
+        <input type="text" id="nominee_question" placeholder="e.g. What was the name of your first pet?" autocomplete="off">
+
+        <label for="nominee_answer">Answer (secret — we never store it; used to encrypt the key)</label>
+        <input type="password" id="nominee_answer" placeholder="Answer" autocomplete="new-password">
+
         <label for="nominee_inactivity">Send claim SMS after no activity for</label>
-        <select id="nominee_inactivity">
-          <option value="0">5 minutes (test)</option>
-          <option value="7">7 days</option>
-          <option value="30" selected>30 days</option>
-          <option value="90">90 days</option>
-        </select>
-        <button type="submit">Create secondary key</button>
+        <div class="select-wrap">
+          <select id="nominee_inactivity">
+            <option value="0">5 minutes (test / demo)</option>
+            <option value="7">7 days</option>
+            <option value="30" selected>30 days</option>
+            <option value="90">90 days</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary-action" style="width: 100%;">Create secondary key</button>
         <div id="nominee-msg" class="msg"></div>
       </form>
     </section>
 
-    <section class="card" id="result-card" style="display: none;">
-      <h2>Step 2: Your secondary key (copy this)</h2>
-      <p style="margin: 0 0 0.75rem 0; color: var(--muted); font-size: 0.9rem;">This is the key we generated for you. Add this public key as a <strong>signer</strong> to your Stellar account. When your account is inactive for the set period, we’ll send an SMS to your nominee with a claim link; only the correct answer will unlock this key in the browser to sweep funds.</p>
+    <section class="card nebula-3 reveal" id="result-card" style="display: none;">
+      <h2>Step 2 — Your secondary key</h2>
+      <p style="margin: 0 0 0.75rem 0; font-size: 0.88rem;">Add this public key as a <strong>signer</strong> to your Stellar account. When inactive, we send an SMS to your nominee with a claim link; only the correct answer unlocks this key.</p>
       <div class="key-box">
         <div class="label">Your secondary key — add this as a signer to your account</div>
         <code class="mono" id="sweep-public-key"></code>
       </div>
-      <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text);"><strong>Add this key as a signer</strong></p>
-      <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--muted);">Use <strong>Set Options</strong>: signer = the key above, weight = 1. You can build the transaction in Stellar Lab or sign it here with Freighter.</p>
-      <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--warn);">Click <strong>Build &amp; sign here</strong> first. If Freighter says not connected, click <strong>Connect wallet</strong> and <strong>Allow</strong> in the popup, then try again. Or use Stellar Lab to build manually.</p>
-      <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-        <button type="button" id="add-signer-btn" class="primary" style="background: var(--accent-dim); color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Build &amp; sign here (Freighter)</button>
-        <button type="button" id="connect-wallet-btn" class="secondary" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 600;">Connect wallet (Freighter)</button>
-        <span id="connect-status" style="font-size: 0.9rem; color: var(--muted);"></span>
-        <a id="open-lab-btn" href="https://lab.stellar.org/transaction/build" target="_blank" rel="noopener" class="secondary" style="display: inline-block; background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 8px; font-family: inherit; cursor: pointer; text-decoration: none; font-size: 0.95rem; font-weight: 600;">Open Stellar Lab → Build transaction</a>
+      <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text); font-weight: 700;">Add this key as a signer</p>
+      <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--muted);">Use <strong>Set Options</strong>: signer = the key above, weight = 1. Build the transaction in Stellar Lab or sign it here with Freighter.</p>
+      <p style="margin: 0.5rem 0 0 0; font-size: 0.82rem; color: var(--warn);">Click <strong>Build & sign here</strong> first. If Freighter says not connected, click <strong>Connect wallet</strong> and <strong>Allow</strong> in the popup, then try again.</p>
+      <div class="btn-group">
+        <button type="button" id="add-signer-btn" class="btn-accent">Build &amp; sign here (Freighter)</button>
+        <button type="button" id="connect-wallet-btn" class="btn-secondary-action">Connect wallet (Freighter)</button>
+        <a id="open-lab-btn" href="https://lab.stellar.org/transaction/build" target="_blank" rel="noopener" class="btn btn-secondary-action" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">Open Stellar Lab</a>
       </div>
-      <div id="add-signer-msg" class="msg" style="margin-top: 0.5rem;"></div>
+      <div id="connect-status" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted);"></div>
+      <div id="add-signer-msg" class="msg"></div>
     </section>
 
-    <footer>
+    <footer class="site-footer reveal">
       <a href="/">← Back to SUPERNOVA</a>
     </footer>
   </div>
 
   <script>
-    // UMD may expose API on .default (e.g. @stellar/freighter-api 2.x)
+    /* ===== Starfield ===== */
+    (function() {
+      const canvas = document.getElementById('starfield');
+      const ctx = canvas.getContext('2d');
+      let W, H, stars = [];
+      const STAR_COUNT = 200;
+      const LAYERS = [
+        { speed: 0.02, sizeMin: 0.4, sizeMax: 1.2, alpha: 0.5 },
+        { speed: 0.05, sizeMin: 0.8, sizeMax: 2,   alpha: 0.7 },
+        { speed: 0.1,  sizeMin: 1.2, sizeMax: 3,   alpha: 0.9 }
+      ];
+      const COLORS = ['#22d3ee','#818cf8','#a855f7','#e8edf5','#ec4899','#e8edf5','#e8edf5'];
+      function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+      function createStars() {
+        stars = [];
+        for (let i = 0; i < STAR_COUNT; i++) {
+          const l = LAYERS[Math.floor(Math.random() * LAYERS.length)];
+          stars.push({
+            x: Math.random() * W, y: Math.random() * H * 3,
+            size: l.sizeMin + Math.random() * (l.sizeMax - l.sizeMin),
+            alpha: l.alpha * (0.4 + Math.random() * 0.6),
+            speed: l.speed,
+            twinkleSpeed: 0.005 + Math.random() * 0.02,
+            twinkleOffset: Math.random() * Math.PI * 2,
+            color: COLORS[Math.floor(Math.random() * COLORS.length)]
+          });
+        }
+      }
+      let scrollY = 0;
+      window.addEventListener('scroll', () => { scrollY = window.pageYOffset; }, { passive: true });
+      let time = 0;
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+        time++;
+        for (const s of stars) {
+          const yPos = (s.y - scrollY * s.speed) % (H * 3);
+          const screenY = yPos < 0 ? yPos + H * 3 : yPos;
+          if (screenY > H + 5) continue;
+          const twinkle = 0.4 + 0.6 * Math.abs(Math.sin(time * s.twinkleSpeed + s.twinkleOffset));
+          ctx.globalAlpha = s.alpha * twinkle;
+          ctx.fillStyle = s.color;
+          ctx.beginPath();
+          ctx.arc(s.x, screenY, s.size, 0, Math.PI * 2);
+          ctx.fill();
+          if (s.size > 1.8) {
+            ctx.globalAlpha = s.alpha * twinkle * 0.15;
+            ctx.beginPath();
+            ctx.arc(s.x, screenY, s.size * 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+        requestAnimationFrame(draw);
+      }
+      resize(); createStars(); draw();
+      window.addEventListener('resize', () => { resize(); createStars(); });
+    })();
+
+    /* ===== Scroll Progress ===== */
+    (function() {
+      const bar = document.getElementById('scroll-progress');
+      window.addEventListener('scroll', () => {
+        const h = document.documentElement.scrollHeight - window.innerHeight;
+        bar.style.width = h > 0 ? (window.pageYOffset / h * 100) + '%' : '0%';
+      }, { passive: true });
+    })();
+
+    /* ===== Scroll Reveal ===== */
+    (function() {
+      const els = document.querySelectorAll('.reveal');
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+        });
+      }, { threshold: 0.1 });
+      els.forEach(el => obs.observe(el));
+    })();
+
+    /* ===== Mouse Cosmic Trail ===== */
+    (function() {
+      const colors = ['#22d3ee','#818cf8','#a855f7','#ec4899','#e8edf5'];
+      let throttle = 0;
+      document.addEventListener('mousemove', (e) => {
+        throttle++;
+        if (throttle % 3 !== 0) return;
+        const p = document.createElement('div');
+        p.className = 'cursor-particle';
+        const size = 3 + Math.random() * 5;
+        p.style.width = size + 'px'; p.style.height = size + 'px';
+        p.style.left = (e.clientX - size/2 + (Math.random()-0.5)*12) + 'px';
+        p.style.top = (e.clientY - size/2 + (Math.random()-0.5)*12) + 'px';
+        p.style.background = colors[Math.floor(Math.random()*colors.length)];
+        p.style.boxShadow = '0 0 ' + (size*2) + 'px ' + p.style.background;
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 800);
+      });
+    })();
+
+    /* ===== Freighter API ===== */
     function getFreighterApi() {
       var w = window.freighterApi || window.freighter;
       if (!w) return null;
@@ -200,6 +539,7 @@
       return w;
     }
 
+    /* ===== Connect Wallet ===== */
     document.getElementById('connect-wallet-btn').addEventListener('click', async function () {
       var statusEl = document.getElementById('connect-status');
       statusEl.textContent = 'Opening Freighter…';
@@ -219,7 +559,6 @@
           }
           return false;
         }
-        // Try setAllowed first — one "Allow this site?" prompt; works even when requestAccess returns empty (known bug)
         if (typeof api.setAllowed === 'function') {
           var setRes = await api.setAllowed().catch(function (e) { return { isAllowed: false, error: e }; });
           if (setRes && (setRes.isAllowed === true || setRes.allowed === true)) {
@@ -233,7 +572,6 @@
             return;
           }
         }
-        // Then requestAccess (may return empty address even after Allow — known Freighter bug)
         if (typeof api.requestAccess !== 'function') {
           statusEl.textContent = 'Click "Build & sign here" and click Allow in Freighter when asked.';
           statusEl.style.color = 'var(--warn)';
@@ -255,13 +593,13 @@
       }
     });
 
+    /* ===== Nominee Form ===== */
     document.getElementById('nominee-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msgEl = document.getElementById('nominee-msg');
       const resultCard = document.getElementById('result-card');
       resultCard.style.display = 'none';
-      msgEl.textContent = '';
-      msgEl.className = 'msg';
+      msgEl.textContent = ''; msgEl.className = 'msg';
       const body = {
         depositor_account_id: document.getElementById('nominee_depositor').value.trim(),
         beneficiary_phone: document.getElementById('nominee_phone').value.trim(),
@@ -300,10 +638,12 @@
       }
     });
 
+    /* ===== Open Lab ===== */
     document.getElementById('open-lab-btn').addEventListener('click', function (e) {
       this.href = 'https://lab.stellar.org/transaction/build';
     });
 
+    /* ===== Add Signer ===== */
     document.getElementById('add-signer-btn').addEventListener('click', async function () {
       var msgEl = document.getElementById('add-signer-msg');
       var accountPublicKey = document.getElementById('nominee_depositor').value.trim();
@@ -319,10 +659,7 @@
         var buildRes = await fetch('/api/build-add-signer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            account_public_key: accountPublicKey,
-            signer_public_key: signerPublicKey,
-          }),
+          body: JSON.stringify({ account_public_key: accountPublicKey, signer_public_key: signerPublicKey }),
         });
         var buildData = await buildRes.json().catch(function () { return {}; });
         if (!buildRes.ok) {
@@ -331,18 +668,11 @@
           return;
         }
         var txXdr = buildData.transaction_xdr;
-        if (!txXdr) {
-          msgEl.textContent = 'No transaction returned from server.';
-          msgEl.className = 'msg err';
-          return;
-        }
+        if (!txXdr) { msgEl.textContent = 'No transaction returned from server.'; msgEl.className = 'msg err'; return; }
         var networkPassphrase = 'Test SDF Network ; September 2015';
         try {
           var cfgRes = await fetch('/api/lock-config');
-          if (cfgRes.ok) {
-            var cfg = await cfgRes.json();
-            if (cfg.network_passphrase) networkPassphrase = cfg.network_passphrase;
-          }
+          if (cfgRes.ok) { var cfg = await cfgRes.json(); if (cfg.network_passphrase) networkPassphrase = cfg.network_passphrase; }
         } catch (_) {}
         var freighterApi = getFreighterApi();
         if (!freighterApi || typeof freighterApi.signTransaction !== 'function') {
@@ -363,11 +693,7 @@
         msgEl.textContent = 'Open Freighter and click Confirm to sign…';
         var signed = await freighterApi.signTransaction(txXdr, { networkPassphrase: networkPassphrase });
         var signedXdr = signed && (signed.signedTransaction || signed.signedEnvelope || signed.signedTxXdr || signed);
-        if (!signedXdr) {
-          msgEl.textContent = 'Signing cancelled or failed.';
-          msgEl.className = 'msg err';
-          return;
-        }
+        if (!signedXdr) { msgEl.textContent = 'Signing cancelled or failed.'; msgEl.className = 'msg err'; return; }
         msgEl.textContent = 'Submitting…';
         var submitRes = await fetch('/api/claim/submit', {
           method: 'POST',
