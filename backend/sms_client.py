@@ -15,7 +15,7 @@ def send_nominee_claim_sms(phone: str, claim_token: str, question_preview: str =
     base = (CLAIM_BASE_URL or "https://stellar-hackathon-242775953468.asia-south1.run.app").rstrip("/")
     link = f"{base}/claim/{claim_token}"
     body = (
-        f"You've been named as a nominee on Walletsurance. "
+        f"You've been named as a nominee on SUPERNOVA. "
         f"To claim, open: {link} You'll be asked a question; your answer unlocks the claim."
     )
     if question_preview:
