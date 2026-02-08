@@ -705,7 +705,13 @@
           msgEl.textContent = 'Done! Co-signer added. Transaction: ' + (submitData.hash || '');
           msgEl.className = 'msg ok';
         } else {
-          msgEl.textContent = submitData.error || (submitRes.status === 500 ? 'Server error.' : 'Submit failed');
+          var errMsg = submitData.error || (submitRes.status === 500 ? 'Server error.' : 'Submit failed');
+          if (submitData.result_codes) {
+            var rc = submitData.result_codes;
+            var codes = [rc.transaction || ''].concat(rc.operations || []).filter(Boolean).join(', ');
+            if (codes) errMsg += ' [' + codes + ']';
+          }
+          msgEl.textContent = errMsg;
           msgEl.className = 'msg err';
         }
       } catch (e) {

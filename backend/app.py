@@ -362,6 +362,41 @@ def claim_data(token):
     return jsonify(out)
 
 
+def _friendly_horizon_error(tx_code: str, op_codes: list) -> str:
+    """Map Horizon result_codes to human-readable messages."""
+    TX_MAP = {
+        "tx_bad_auth": "Transaction signature invalid. The signing key may not have enough weight on this account. Make sure the co-signer was added with weight >= 1.",
+        "tx_bad_seq": "Bad sequence number. Please try again (the account may have had a recent transaction).",
+        "tx_too_late": "Transaction expired. Please try again.",
+        "tx_insufficient_fee": "Transaction fee too low. Please try again.",
+        "tx_insufficient_balance": "Not enough XLM to cover the fee + minimum reserve.",
+    }
+    OP_MAP = {
+        "op_underfunded": "Not enough balance to send this amount (check minimum reserve).",
+        "op_no_destination": "Destination account does not exist on the network. Fund it first (e.g. via Friendbot for testnet).",
+        "op_bad_auth": "Operation not authorized by the required signers.",
+        "op_line_full": "Destination cannot receive this asset (trustline full).",
+        "op_no_trust": "Destination has no trustline for this asset.",
+        "SET_OPTIONS_LOW_RESERVE": "Account needs more XLM to add a signer (increase balance above the reserve).",
+    }
+    parts = []
+    if tx_code and tx_code in TX_MAP:
+        parts.append(TX_MAP[tx_code])
+    for code in op_codes:
+        if code in OP_MAP:
+            parts.append(OP_MAP[code])
+    if not parts:
+        # Show raw codes if we don't have a mapping
+        raw = []
+        if tx_code:
+            raw.append(f"tx: {tx_code}")
+        if op_codes:
+            raw.append(f"ops: {', '.join(op_codes)}")
+        if raw:
+            return "Transaction failed — " + "; ".join(raw)
+    return " ".join(parts)
+
+
 @app.route("/api/claim/submit", methods=["POST"])
 def claim_submit():
     """Submit signed classic transaction (sweep or add-signer). Body: signed_envelope_xdr."""
@@ -376,7 +411,22 @@ def claim_submit():
     tx_hash = result.get("hash") or result.get("id")
     if tx_hash:
         return jsonify({"hash": tx_hash, "status": "success"})
-    return jsonify({"error": result.get("detail", result.get("error", "Submit failed"))}), 400
+
+    # Extract detailed result_codes from Horizon error
+    extras = result.get("extras", {})
+    result_codes = extras.get("result_codes", {})
+    tx_code = result_codes.get("transaction", "")
+    op_codes = result_codes.get("operations", [])
+
+    # Build a user-friendly message from codes
+    friendly = _friendly_horizon_error(tx_code, op_codes)
+    detail = result.get("detail") or result.get("title") or result.get("error") or "Submit failed"
+
+    return jsonify({
+        "error": friendly or detail,
+        "result_codes": result_codes,
+        "detail": detail,
+    }), 400
 
 
 @app.route("/api/claim/offramp", methods=["POST"])

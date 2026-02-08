@@ -315,7 +315,16 @@
           if(r.ok&&d.status==='success'){
             if(mode==='bank'){msgEl.textContent='Sweep done. Requesting bank payout…';const or=await fetch('/api/claim/offramp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({claim_token:claimToken,bank_account_holder:document.getElementById('bank_holder').value.trim(),bank_account_number:document.getElementById('bank_account').value.trim(),bank_ifsc:document.getElementById('bank_ifsc').value.trim(),bank_name:document.getElementById('bank_name').value.trim(),amount_xlm:res.nativeXlmAmount})});const od=await or.json().catch(()=>({}));if(or.ok&&od.status==='success'){msgEl.textContent='Sweep successful. '+(od.message||'')+' Order: '+(od.order_id||'')+'. '+(od.amount_inr_mock!=null?'~₹'+od.amount_inr_mock+' (mock).':'');msgEl.className='msg ok'}else{msgEl.textContent='Sweep done. Bank payout error: '+(od.error||'unknown');msgEl.className='msg err'}}
             else{msgEl.textContent='Success! Transaction hash: '+(d.hash||'submitted');msgEl.className='msg ok'}
-          }else{msgEl.textContent=d.error||'Submit failed';msgEl.className='msg err'}
+          }else{
+            let errMsg = d.error || 'Submit failed';
+            if (d.result_codes) {
+              const rc = d.result_codes;
+              const codes = [rc.transaction || '', ...(rc.operations || [])].filter(Boolean).join(', ');
+              if (codes) errMsg += ' [' + codes + ']';
+            }
+            msgEl.textContent = errMsg;
+            msgEl.className = 'msg err';
+          }
         }catch(e){msgEl.textContent=e.message||'Error (wrong answer or no balance?)';msgEl.className='msg err'}
         this.disabled=false;
       });
