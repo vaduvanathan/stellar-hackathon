@@ -663,7 +663,7 @@ def _run_check_nominees():
         except (TypeError, ValueError):
             inactivity_days = 30
         if inactivity_days == 0:
-            threshold = now - timedelta(minutes=5)
+            threshold = now - timedelta(minutes=2)
             last_dt = None
             if last:
                 try:

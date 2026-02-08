@@ -33,8 +33,8 @@ TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER", "").strip()
 # Base URL for claim links in SMS (e.g. https://your-app.run.app)
 CLAIM_BASE_URL = os.environ.get("CLAIM_BASE_URL", "").strip()
 
-# In-backend agent: run nominee inactivity check every N minutes (0 = disabled). Default 3 minutes.
-INACTIVITY_CHECK_INTERVAL_MINUTES = int(os.environ.get("INACTIVITY_CHECK_INTERVAL_MINUTES", "3").strip() or "0")
+# In-backend agent: run nominee inactivity check every N minutes (0 = disabled). Default 1 minute.
+INACTIVITY_CHECK_INTERVAL_MINUTES = int(os.environ.get("INACTIVITY_CHECK_INTERVAL_MINUTES", "1").strip() or "0")
 
 # When nominee chooses "Send to bank", swept funds go to this address; then we call Onmeta to send fiat to their bank.
 PLATFORM_SWEEP_PUBLIC_KEY = os.environ.get("PLATFORM_SWEEP_PUBLIC_KEY", "").strip()
