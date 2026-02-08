@@ -10,19 +10,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #22d3ee;
-      --bg2: #1cc5df;
-      --surface: rgba(255, 255, 255, 0.2);
-      --border: rgba(0, 0, 0, 0.08);
-      --border-glow: rgba(0, 0, 0, 0.18);
-      --text: #0a1628;
-      --muted: #1a4a5e;
-      --accent: #0f172a;
-      --accent2: #6d28d9;
-      --accent-dim: #1e293b;
-      --warn: #92400e;
-      --err: #dc2626;
-      --glow: rgba(255, 255, 255, 0.7);
+      --bg: #060b18;
+      --bg2: #0a1128;
+      --surface: rgba(15, 25, 60, 0.7);
+      --border: rgba(100, 160, 255, 0.15);
+      --border-glow: rgba(100, 160, 255, 0.3);
+      --text: #e8edf5;
+      --muted: #7b8ba8;
+      --accent: #22d3ee;
+      --accent2: #818cf8;
+      --accent-dim: #0ea5c9;
+      --warn: #fbbf24;
+      --err: #f87171;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
@@ -41,9 +40,9 @@
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
       padding: 1rem 2rem;
-      background: rgba(34, 211, 238, 0.85);
+      background: rgba(6, 11, 24, 0.85);
       backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(0,0,0,0.08);
+      border-bottom: 1px solid var(--border);
     }
     .navbar-brand {
       display: flex; align-items: center; gap: 0.5rem;
@@ -65,8 +64,8 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       text-align: center;
       padding: 6rem 1.5rem 4rem;
-      background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(255,255,255,0.25) 0%, transparent 70%),
-                  radial-gradient(ellipse 60% 50% at 50% 50%, rgba(109,40,217,0.08) 0%, transparent 70%),
+      background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(34, 211, 238, 0.08) 0%, transparent 70%),
+                  radial-gradient(ellipse 60% 50% at 50% 50%, rgba(129, 140, 248, 0.06) 0%, transparent 70%),
                   var(--bg);
       overflow: hidden;
     }
@@ -74,14 +73,16 @@
       content: '';
       position: absolute; inset: 0;
       background-image:
-        radial-gradient(2px 2px at 10% 20%, rgba(255,255,255,0.6) 50%, transparent 50%),
-        radial-gradient(1.5px 1.5px at 30% 60%, rgba(255,255,255,0.4) 50%, transparent 50%),
-        radial-gradient(2px 2px at 50% 10%, rgba(255,255,255,0.5) 50%, transparent 50%),
-        radial-gradient(1.5px 1.5px at 70% 80%, rgba(255,255,255,0.35) 50%, transparent 50%),
-        radial-gradient(2px 2px at 90% 30%, rgba(255,255,255,0.45) 50%, transparent 50%),
-        radial-gradient(1.5px 1.5px at 15% 85%, rgba(255,255,255,0.4) 50%, transparent 50%),
-        radial-gradient(2px 2px at 80% 50%, rgba(255,255,255,0.45) 50%, transparent 50%),
-        radial-gradient(1.5px 1.5px at 45% 40%, rgba(255,255,255,0.35) 50%, transparent 50%);
+        radial-gradient(1.5px 1.5px at 10% 20%, rgba(100,160,255,0.4) 50%, transparent 50%),
+        radial-gradient(1px 1px at 30% 60%, rgba(100,160,255,0.25) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 50% 10%, rgba(100,160,255,0.35) 50%, transparent 50%),
+        radial-gradient(1px 1px at 70% 80%, rgba(100,160,255,0.2) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 90% 30%, rgba(100,160,255,0.3) 50%, transparent 50%),
+        radial-gradient(1px 1px at 15% 85%, rgba(100,160,255,0.25) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 80% 50%, rgba(100,160,255,0.3) 50%, transparent 50%),
+        radial-gradient(1px 1px at 45% 40%, rgba(100,160,255,0.2) 50%, transparent 50%),
+        radial-gradient(1px 1px at 60% 25%, rgba(100,160,255,0.3) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 25% 45%, rgba(100,160,255,0.25) 50%, transparent 50%);
       animation: drift 20s ease-in-out infinite alternate;
       pointer-events: none;
     }
@@ -100,28 +101,15 @@
     .logo-scene::after {
       content: '';
       position: absolute;
-      bottom: -25px; left: 50%; transform: translateX(-50%);
-      width: 160px; height: 50px;
-      background: radial-gradient(ellipse, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 40%, transparent 70%);
-      filter: blur(12px);
+      bottom: -20px; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 30px;
+      background: radial-gradient(ellipse, rgba(34,211,238,0.25) 0%, transparent 70%);
+      filter: blur(8px);
       animation: glow-pulse 3s ease-in-out infinite alternate;
     }
     @keyframes glow-pulse {
-      from { opacity: 0.4; transform: translateX(-50%) scale(0.85); }
-      to { opacity: 1; transform: translateX(-50%) scale(1.15); }
-    }
-    .logo-scene::before {
-      content: '';
-      position: absolute;
-      inset: -30px;
-      background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.1) 40%, transparent 65%);
-      filter: blur(18px);
-      animation: halo-pulse 4s ease-in-out infinite alternate;
-      pointer-events: none;
-    }
-    @keyframes halo-pulse {
-      from { opacity: 0.5; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1.05); }
+      from { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
+      to { opacity: 1; transform: translateX(-50%) scale(1.1); }
     }
     .logo-cube {
       width: 100%; height: 100%;
@@ -142,14 +130,14 @@
     }
     .logo-face svg {
       width: 140px; height: 140px;
-      filter: drop-shadow(0 0 20px rgba(255,255,255,0.5)) drop-shadow(0 0 50px rgba(255,255,255,0.3)) drop-shadow(0 0 80px rgba(0,0,0,0.15));
+      filter: drop-shadow(0 0 30px rgba(34,211,238,0.35)) drop-shadow(0 0 60px rgba(129,140,248,0.2));
     }
 
     .hero h1 {
       font-size: clamp(2.5rem, 6vw, 4rem);
       font-weight: 900; letter-spacing: -0.03em; line-height: 1.1;
       margin-bottom: 1.25rem;
-      background: linear-gradient(135deg, #0a1628 0%, #1e293b 50%, #6d28d9 100%);
+      background: linear-gradient(135deg, #e8edf5 0%, #22d3ee 50%, #818cf8 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
     }
@@ -161,17 +149,17 @@
     .hero-cta {
       display: inline-flex; align-items: center; gap: 0.5rem;
       padding: 0.85rem 2rem;
-      border: 2px solid var(--accent);
+      border: 2px solid var(--border-glow);
       border-radius: 50px;
-      color: var(--accent); font-weight: 700; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text); font-weight: 700; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.08em;
       text-decoration: none;
       transition: all 0.3s;
       background: transparent;
     }
     .hero-cta:hover {
-      background: var(--accent);
-      color: #fff;
-      box-shadow: 0 6px 25px rgba(15,23,42,0.3);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 20px rgba(34,211,238,0.2), inset 0 0 20px rgba(34,211,238,0.05);
     }
     .hero-cta svg { width: 18px; height: 18px; }
 
@@ -180,21 +168,19 @@
 
     .section-card {
       position: relative;
-      background: rgba(255, 255, 255, 0.22);
+      background: var(--surface);
       border-radius: 16px;
       padding: 2rem 2rem;
       margin-bottom: 2rem;
-      backdrop-filter: blur(16px);
+      backdrop-filter: blur(8px);
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
     }
     .section-card::before {
       content: '';
       position: absolute; inset: 0;
       border-radius: 16px;
       padding: 1px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.5), rgba(255,255,255,0.15), rgba(255,255,255,0.3));
+      background: linear-gradient(135deg, rgba(34,211,238,0.3), rgba(129,140,248,0.15), rgba(34,211,238,0.1));
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
@@ -219,31 +205,31 @@
     a.btn-primary {
       display: inline-flex; align-items: center; gap: 0.5rem;
       padding: 0.7rem 1.5rem;
-      background: var(--accent);
-      color: #fff; font-weight: 700; font-size: 0.95rem; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #060b18; font-weight: 700; font-size: 0.95rem; border-radius: 10px;
       text-decoration: none;
       transition: all 0.3s;
-      box-shadow: 0 4px 20px rgba(15,23,42,0.2);
+      box-shadow: 0 4px 20px rgba(34,211,238,0.25);
     }
-    a.btn-primary:hover { box-shadow: 0 6px 30px rgba(15,23,42,0.35); transform: translateY(-1px); }
+    a.btn-primary:hover { box-shadow: 0 6px 30px rgba(34,211,238,0.4); transform: translateY(-1px); }
 
     button {
       font-family: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer;
       padding: 0.6rem 1.2rem; border-radius: 10px; border: none;
-      background: var(--accent); color: #fff;
+      background: var(--accent); color: #060b18;
       transition: all 0.2s;
     }
     button:hover { background: var(--accent-dim); }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
     button.secondary {
-      background: rgba(255,255,255,0.25); color: var(--text);
-      border: 1px solid rgba(0,0,0,0.12);
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border-glow);
     }
-    button.secondary:hover { background: rgba(255,255,255,0.4); }
+    button.secondary:hover { border-color: var(--accent); color: var(--accent); }
 
     code, .mono {
       font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
-      background: rgba(0,0,0,0.06); padding: 0.15em 0.4em; border-radius: 4px;
+      background: rgba(34,211,238,0.08); padding: 0.15em 0.4em; border-radius: 4px;
       word-break: break-all;
     }
 
@@ -265,8 +251,8 @@
       content: counter(step);
       position: absolute; left: 0; top: 0;
       width: 1.75rem; height: 1.75rem;
-      background: rgba(0,0,0,0.08);
-      border: 1px solid rgba(0,0,0,0.15);
+      background: rgba(34,211,238,0.1);
+      border: 1px solid rgba(34,211,238,0.3);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 0.75rem; font-weight: 700; color: var(--accent);
@@ -278,11 +264,85 @@
     /* ---- Footer ---- */
     .site-footer {
       text-align: center; padding: 3rem 1.5rem;
-      border-top: 1px solid rgba(0,0,0,0.08);
+      border-top: 1px solid var(--border);
       color: var(--muted); font-size: 0.85rem;
     }
     .site-footer a { color: var(--accent); text-decoration: none; }
     .site-footer a:hover { text-decoration: underline; }
+
+    /* ---- Rise In kite animation ---- */
+    .risein-kite {
+      position: fixed;
+      z-index: 200;
+      width: 70px;
+      height: 70px;
+      pointer-events: none;
+      animation: kite-fly 2.2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+      opacity: 0;
+    }
+    @keyframes kite-fly {
+      0% {
+        bottom: -80px; left: -80px;
+        opacity: 0;
+        transform: rotate(-15deg) scale(0.5);
+      }
+      15% {
+        opacity: 1;
+      }
+      60% {
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      }
+      100% {
+        bottom: calc(100vh - 110px);
+        left: calc(100vw - 110px);
+        opacity: 0;
+        transform: rotate(5deg) scale(0.7);
+      }
+    }
+    /* Trail behind the kite */
+    .risein-kite::after {
+      content: '';
+      position: absolute;
+      bottom: -6px; left: -6px;
+      width: 50px; height: 50px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(65,218,190,0.35), rgba(180,255,36,0.15), transparent 70%);
+      filter: blur(10px);
+      animation: trail-glow 2.2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+    }
+    @keyframes trail-glow {
+      0% { opacity: 0; transform: scale(0.5); }
+      20% { opacity: 1; }
+      100% { opacity: 0; transform: scale(2); }
+    }
+
+    /* Sparkle star that appears at top-right after kite arrives */
+    .risein-star {
+      position: fixed;
+      top: 80px; right: 40px;
+      width: 28px; height: 28px;
+      z-index: 150;
+      pointer-events: none;
+      opacity: 0;
+      animation: star-appear 0.6s ease-out 2s forwards, star-twinkle 2s ease-in-out 2.6s infinite alternate;
+    }
+    @keyframes star-appear {
+      from { opacity: 0; transform: scale(0) rotate(-30deg); }
+      to { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+    @keyframes star-twinkle {
+      from { opacity: 0.7; transform: scale(0.9); filter: drop-shadow(0 0 4px rgba(34,211,238,0.4)); }
+      to { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 12px rgba(34,211,238,0.7)); }
+    }
+
+    /* Rise In badge in footer */
+    .risein-footer {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .risein-footer svg { width: 32px; height: 32px; }
+    .risein-footer span { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
 
     /* ---- Responsive ---- */
     @media (max-width: 600px) {
@@ -292,18 +352,42 @@
       .logo-face svg { width: 100px; height: 100px; }
       .content { padding: 0 1rem 3rem; }
       .section-card { padding: 1.5rem; }
+      .risein-kite { width: 50px; height: 50px; }
+      .risein-star { top: 70px; right: 20px; width: 22px; height: 22px; }
     }
   </style>
 </head>
 <body>
 
+  <!-- Rise In kite: flies from bottom-left to top-right on load -->
+  <div class="risein-kite" aria-hidden="true">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <!-- Left teal triangle -->
+      <polygon points="5,45 30,18 30,45" fill="#41DABE"/>
+      <!-- 2x2 colored squares -->
+      <rect x="30" y="18" width="25" height="27" fill="#CC45FF"/>
+      <rect x="55" y="18" width="25" height="27" fill="#8427FD"/>
+      <rect x="30" y="45" width="25" height="27" fill="#B4FF24"/>
+      <rect x="55" y="45" width="25" height="27" fill="#CC45FF"/>
+      <!-- Bottom-right teal triangle -->
+      <polygon points="55,72 80,72 80,97" fill="#41DABE"/>
+    </svg>
+  </div>
+
+  <!-- Sparkle star stays at top-right after kite passes -->
+  <div class="risein-star" aria-hidden="true">
+    <svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 2 L17 11 L26 13 L17 15 L15 24 L13 15 L4 13 L13 11 Z" fill="#22d3ee"/>
+    </svg>
+  </div>
+
   <!-- Navbar -->
   <nav class="navbar">
     <a href="/" class="navbar-brand">
       <svg viewBox="0 0 230 230" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M115 30 C60 30 30 70 30 115 C30 160 60 200 115 200 C170 200 200 160 200 115 C200 70 170 30 115 30Z" stroke="#0a1628" stroke-width="12" fill="none"/>
-        <line x1="55" y1="90" x2="175" y2="90" stroke="#0a1628" stroke-width="10" stroke-linecap="round"/>
-        <line x1="55" y1="140" x2="175" y2="140" stroke="#0a1628" stroke-width="10" stroke-linecap="round"/>
+        <path d="M115 30 C60 30 30 70 30 115 C30 160 60 200 115 200 C170 200 200 160 200 115 C200 70 170 30 115 30Z" stroke="#22d3ee" stroke-width="12" fill="none"/>
+        <line x1="55" y1="90" x2="175" y2="90" stroke="#22d3ee" stroke-width="10" stroke-linecap="round"/>
+        <line x1="55" y1="140" x2="175" y2="140" stroke="#22d3ee" stroke-width="10" stroke-linecap="round"/>
       </svg>
       Walletsurance
     </a>
@@ -368,11 +452,22 @@
 
   <!-- Footer -->
   <footer class="site-footer">
-    <div style="margin-bottom: 1.5rem;">
-      <img src="https://cryptologos.cc/logos/versions/stellar-xlm-logo-full.svg?v=040" alt="Stellar" style="height: 38px; opacity: 0.85;" />
+    <div style="margin-bottom: 1.25rem;">
+      <img src="https://cryptologos.cc/logos/versions/stellar-xlm-logo-full.svg?v=040" alt="Stellar" style="height: 36px; filter: brightness(0) invert(1); opacity: 0.7;" />
     </div>
-    <p style="font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem;">Stellar Build-A-Thon Chennai</p>
-    <p><a href="https://github.com/vaduvanathan/stellar-hackathon">GitHub</a></p>
+    <p style="font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.75rem;">Stellar Build-A-Thon Chennai</p>
+    <div class="risein-footer">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="5,45 30,18 30,45" fill="#41DABE"/>
+        <rect x="30" y="18" width="25" height="27" fill="#CC45FF"/>
+        <rect x="55" y="18" width="25" height="27" fill="#8427FD"/>
+        <rect x="30" y="45" width="25" height="27" fill="#B4FF24"/>
+        <rect x="55" y="45" width="25" height="27" fill="#CC45FF"/>
+        <polygon points="55,72 80,72 80,97" fill="#41DABE"/>
+      </svg>
+      <span>Rise In</span>
+    </div>
+    <p style="margin-top: 0.75rem;"><a href="https://github.com/vaduvanathan/stellar-hackathon">GitHub</a></p>
   </footer>
 
   <script>
