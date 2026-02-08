@@ -289,7 +289,7 @@
       async function buildSweepTransaction(secretKey,beneficiaryAddress){
         const S=window.StellarSdk,a=claimData.account;
         if(!a||!a.balances||!a.balances.length)throw new Error('Account not found or has no balances.');
-        const kp=S.Keypair.fromSecret(secretKey),sa=new S.Account(kp.publicKey(),a.sequence);
+        const kp=S.Keypair.fromSecret(secretKey),sa=new S.Account(a.id,a.sequence);
         const fee=(typeof S.BASE_FEE!=='undefined')?S.BASE_FEE:100;
         const b=new S.TransactionBuilder(sa,{fee:String(fee),networkPassphrase:claimData.network_passphrase});
         let ops=0,xlmAmt='0';const reserve=(2+parseInt(a.subentry_count,10)||0)*5000000;
